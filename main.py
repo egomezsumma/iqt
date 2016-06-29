@@ -45,20 +45,6 @@ def psudo_inversa(matriz):
     return matriz
 
 
-# input:
-#      img:{get_data,get_affine, get_header:{get_zooms,...} }
-#      scale: R
-# output: new_data, new_affine
-#      if scale=2 --> la mitad
-#      if scale=0.5 --> el doble
-def downsampling(img, scale):
-    from dipy.align.reslice import reslice
-    data = img.get_data()
-    affine = img.get_affine()
-    # Load and show the zooms which hold the voxel size.
-    zooms = img.get_header().get_zooms()[:3]
-    data2, affine2 = reslice(data, affine, zooms, 2 * np.array(zooms))
-    return data2, affine2
 
 # Set parameters
 n=2
@@ -77,9 +63,22 @@ n, m, p1, p2, N1, N2
 
 #y, G = gl.predict(x);
 
-print xis.shape;
+#print xis.shape;
+
+from utils.DmriVolumesRandomIndexers import DmriLrHrCubicPatchVolumeRandomIndexer
+from utils.DmriSampleCreators import LrHrDmriRandomSampleCreator
+
 
 d = DataGetter()
+data = d.get_data(DataGetter.STANDFORD_HARDI_DATA)['standfor_hardi'];
+try:
+    n=2;m=2
 
+    sc = LrHrDmriRandomSampleCreator(data['img'], n, m)
 
-print d.get_data().keys();
+    arr = [ sc.next() for _ in range(0,6)]
+    print arr
+except Exception as e:
+    print e;
+
+print 'alala'
