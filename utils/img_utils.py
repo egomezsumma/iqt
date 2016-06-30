@@ -1,4 +1,4 @@
-
+import numpy as np;
 
 # input:
 #      img:{get_data,get_affine, get_header:{get_zooms,...} }
@@ -15,3 +15,24 @@ def downsampling(img, scale):
     zooms = img.get_header().get_zooms()[:3]
     data2, affine2 = reslice(data, affine, zooms, 2*np.array(zooms))
     return data2, affine2
+
+
+# Dada una matriz de NxM y la convierte en una
+# de Kx1 (con k = N*M)
+def column_this(matrix):
+    res = matrix2vector(matrix)
+    return np.array([res]).T
+
+
+# Dada una matriz de NxM y la convierte en una
+# de Nx(M+1)
+# new_column  tiene que ser de PxQ con P*Q=N
+def append_column(matrix, new_column):
+    b1 = matrix2vector(new_column)
+    return np.append(matrix, np.array([b1]).T, axis=1)
+
+
+# Dada una matriz de NxM la aplana en una de Px1
+# con P=N*M
+def matrix2vector(matrix):
+    return np.reshape(matrix, matrix.size);

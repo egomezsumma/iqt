@@ -67,6 +67,8 @@ n, m, p1, p2, N1, N2
 
 from utils.DmriVolumesRandomIndexers import DmriLrHrCubicPatchVolumeRandomIndexer
 from utils.DmriSampleCreators import LrHrDmriRandomSampleCreator
+from utils.dmri_patch_operations.DtiModel import DtiModel
+from utils.img_utils import column_this
 
 
 d = DataGetter()
@@ -76,8 +78,30 @@ try:
 
     sc = LrHrDmriRandomSampleCreator(data['img'], n, m)
 
-    arr = [ sc.next() for _ in range(0,6)]
-    print arr
+    print "Samples for standfor_hardi:", sc.size();
+    arr = [ sc.next() for _ in range(0,10)]
+
+    dtim = DtiModel(data['gtab'])
+    patch_lr, patch_hr = arr[0]
+
+    x_dti_patch = dtim.get_dti_params(patch_lr);
+    y_dti_patch = dtim.get_dti_params(patch_hr);
+
+
+    X = column_this(x_dti_patch.get_volume())
+    Y = column_this(y_dti_patch.get_volume())
+
+    print X.shape, Y.shape
+    for i in range(1, len(arr)):
+        patch_lr, patch_hr = arr[i]
+        x_dti_patch = dtim.get_dti_params(patch_lr);
+        y_dti_patch = dtim.get_dti_params(patch_hr);
+
+        X = append_column(X, x_dti_patch.get_volume())
+        Y = append_column(Y, y_dti_patch.get_volume())
+
+    print X.shape, Y.shape
+
 except Exception as e:
     print e;
 

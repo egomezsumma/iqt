@@ -21,6 +21,47 @@ class RandomIterator(object):
             self.current += 1
             return self._indexs[self.current - 1];
 
+class Random1DRange(object):
+    def __init__(self, ends, len = 1, limit=-1):
+
+        if ends - len < 0:
+            raise RuntimeError('dimension de ' + str(ends) + ' es menor que la longitud del rango de ' + len +'')
+
+        self._x = RandomIterator(ends - len, limit)
+        self.len = len;
+        self.current = 0;
+
+    def __iter__(self):
+        return self
+
+    def next(self):  # Python 3: def __next__(self)
+        x = self._x.next()
+        return (x, x + self.len);
+
+class Fixed1DRange(object):
+        def __init__(self, start, ends, limit=-1):
+            if start > ends :
+                raise RuntimeError('los valores pasados no forman un rango valido '+ str(start) + ":"+str(ends))
+            self.start = start
+            self.ends = ends
+            self.limit=limit
+            self.current = 0;
+
+        def __iter__(self):
+            return self
+
+        def next(self):  # Python 3: def __next__(self)
+            # There's no limit
+            if self.limit < 0 :
+                return (self.start, self.ends);
+
+
+            if self.current <= self.limit:
+                return (self.start, self.ends);
+            else:
+                raise StopIteration;
+
+
 
 # si no se pasa limit se devolveran tantos elementos como la menor de las dimensiones
 class Random3DRange(object):
@@ -45,6 +86,7 @@ class Random3DRange(object):
         self.len_z = len_z;
 
         self.current = 0;
+
 
     def __iter__(self):
         return self
