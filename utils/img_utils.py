@@ -1,4 +1,5 @@
 import numpy as np;
+import matplotlib.pyplot as plt
 
 # input:
 #      img:{get_data,get_affine, get_header:{get_zooms,...} }
@@ -36,3 +37,14 @@ def append_column(matrix, new_column):
 # con P=N*M
 def matrix2vector(matrix):
     return np.reshape(matrix, matrix.size);
+
+def plot_this(x,y, model):
+    plt.scatter(x, y,  color='black')
+    print x.shape, model.predict(x).shape
+    plt.plot(x, model.predict(x), color='blue',
+             linewidth=3)
+
+    plt.xticks(())
+    plt.yticks(())
+
+    plt.show()
