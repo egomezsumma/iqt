@@ -8,12 +8,11 @@ from utils.img_utils import downsampling
 #  if scale=0.5 --> el doble
 class LrHrDmriRandomSampleCreator(object):
 
-    def __init__(self,name, img_hr_data, gtab,  n, m):
-        self._name = name;
-        self.img_hr_data = img_hr_data
-        self.gtab = gtab;
-        self.scale = m
-        self.img_lr, self.lr_affine = downsampling(img_hr_data, m)
+    def __init__(self,lr_hr_img,  n, m):
+        self._name = lr_hr_img.name;
+        self.img_hr_data = lr_hr_img.get_hr_img();
+        self.gtab = lr_hr_img.get_gtab();
+        self.img_lr = lr_hr_img.get_lr_img()
         self.lr_hr_vol_it = DmriLrHrCubicPatchVolumeRandomIndexer(self.img_lr.shape, n, m)
 
     @property
@@ -27,7 +26,7 @@ class LrHrDmriRandomSampleCreator(object):
         return self.img_lr
 
     def get_hr_img(self):
-        return self.img_hr_data.get_data()
+        return self.img_hr_data
 
     def __iter__(self):
         return self

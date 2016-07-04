@@ -19,7 +19,7 @@ class DmriPatch(object):
         self.indexs = indexs
 
     def get_volume(self):
-        return volume
+        return self.volume
 
     def get_indexs(self):
         return self.indexs

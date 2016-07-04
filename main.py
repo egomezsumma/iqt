@@ -1,6 +1,7 @@
 import numpy as np
 from utils.DataGetter import DataGetter
 from utils.ml.MLDataBuilder import SimpleDtiMlDataBuilder
+from utils.DownsampledImage import DownsampledImage
 from utils.img_utils import plot_this
 
 ## MOCKS METHODS #######################################################################################################
@@ -11,10 +12,8 @@ def get_a_patch_to_predict():
 
 from utils.DmriSampleCreators import LrHrDmriRandomSampleCreator
 
-def load_dmri(n_samples):
+def load_dmri(n_samples, n , m):
     try:
-        n = 2;
-        m = 2;
         N1 = (2 * n + 1) ** 3
         N2 = m ** 3
 
@@ -26,11 +25,13 @@ def load_dmri(n_samples):
 
         datas = d.get_data(datas_names);
 
-        sample_creators = [ LrHrDmriRandomSampleCreator(name, datas[name]['img'], datas[name]['gtab'], n, m) for name in datas_names ]
-        sdb = SimpleDtiMlDataBuilder(sample_creators,n_samples);
+
+        lr_hr_imgs = [DownsampledImage(name, datas[name]['img'], datas[name]['gtab'], m) for name in datas_names ];
+        sample_creators = [ LrHrDmriRandomSampleCreator(lr_hr_img, n, m) for lr_hr_img in lr_hr_imgs ]
+        sdb = SimpleDtiMlDataBuilder(sample_creators, n_samples);
         X, Y = sdb.build()
         print X.shape, Y.shape
-        return X, Y
+        return X, Y, lr_hr_imgs
     except Exception as e:
         print e;
 
@@ -39,8 +40,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import datasets, linear_model
 
+n = 2;
+m = 2;
 
-X, Y = load_dmri(10)
+X, Y , lr_hr_imgs = load_dmri(10, n, m)
 
 #Split the data into training/testing sets
 dmri_X_train = X.T[:-1]
@@ -74,18 +77,51 @@ print('Variance score: %.2f' % regr.score(dmri_X_test, dmri_y_test))
 
 
 y = regr.predict(dmri_X_test)
-
+print y.shape
 voxels_dxx = y.reshape((6,8)).T
 dti_vol = voxels_dxx.reshape((2,2,2,6))
-from utils.dmri_patch_operations.DtiModel import DtiPatch
-
-
-DtiPatch()
-print np.linalg.norm(y-dmri_y_test)
+print dti_vol.shape
 
 
 
-#plot_this(dmri_X_test,dmri_y_test,regr)
+from utils.img_utils import column_this
+from utils.dmri_patch_operations.LrHrPatchIterator import LrHrPatchIterator
+from utils.dmri_patch_operations.DmriPatch import DmriPatch
+from utils.dmri_patch_operations.DtiModel import DtiModel
+
+img_a_reconstruir = lr_hr_imgs[0];
+img_lr_gtab = img_a_reconstruir.get_gtab();
+img_lr = img_a_reconstruir.get_lr_img()
+img_hr_shape = img_a_reconstruir.get_hr_img().shape
+dti_img_hr = np.zeros((img_hr_shape[0], img_hr_shape[1], img_hr_shape[2], 6));
+print dti_img_hr.shape
+img_lr_shape = img_lr.shape
+
+it = LrHrPatchIterator(img_lr_shape,n, m)
 
 
 
+dti_model = DtiModel(img_lr_gtab);
+for data_ranges_lr_hr in it :
+    (x0, xf, y0, yf, z0, zf) = data_ranges_lr_hr['lr']
+
+    dmri_pathc_data = img_lr[x0:xf, y0: yf, z0:zf]
+    x = dti_model.get_dti_params(DmriPatch(dmri_pathc_data)).get_volume()
+    #print x.shape
+    x = column_this(x)
+    y = regr.predict(x.T)
+    #print y.shape
+
+    voxels_dxx = y.reshape((6, 8)).T
+    dti_vol = voxels_dxx.reshape((2, 2, 2, 6))
+
+    (a0, af, b0, bf, c0, cf) = data_ranges_lr_hr['hr']
+    dti_img_hr[a0:af, b0:bf, c0:cf, :] = dti_vol
+
+    #print np.sum(img_lr[x0:xf, y0: yf, z0:zf]), img_lr[x0:xf, y0: yf, z0:zf].shape
+    #print np.sum(img_hr[x0:xf, y0: yf, z0:zf]), img_hr[x0:xf, y0: yf, z0:zf].shape
+
+print dti_img_hr.shape
+
+#TODO: chequear que escribia tantos voxeles como se supone (acordate de restarle el pading)
+#      creo q seria 2*2*2*(numit) == (x-2)*m * (y-2)*m * (z-2)*m (x,y,z)=lr.shape

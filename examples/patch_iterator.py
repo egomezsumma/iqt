@@ -20,7 +20,7 @@ sum = 0; sum_acum =0
 for i in range(0,shapeLrImg[0]-patchN1+1):
     for j in range(0,shapeLrImg[1]-patchN1+1):
         for k in range(0,shapeLrImg[2]-patchN1+1) :
-            print i,j,k, '-->', lrimg[i][j][k];
+            #print i,j,k, '-->', lrimg[i][j][k];
 
             sum=sum+1
             x = (i+2)*patchN2
@@ -38,6 +38,14 @@ print 'iteratiosn=s', sum, sum*(patchN2**3), sum_acum
 print lrimg.shape, '-->', hrimg.shape
 print hrimg.sum();
 
+
+
+from utils.dmri_patch_operations.LrHrPatchIterator import LrHrPatchIterator;
+
+it = LrHrPatchIterator(shapeLrImg,n,m)
+
+ranges = [x for x in it]
+print ranges
 
 
 

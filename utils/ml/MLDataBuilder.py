@@ -3,6 +3,16 @@ from utils.dmri_patch_operations.DtiModel import DtiModel
 from utils.img_utils import column_this, append_column
 
 
+#
+# Toma una lista de creadores de samples-lr-hr (cada creador esta asociaddo a una imagen)
+#   (creadores de samples-lr-hr: tiene asociada una imagen, y permiten iterar sobre patch al
+#    de la misma, pero te devuelve la version normal y la downsampleada del pedazo)
+# Los usa para crear una cantidad de samples de cada imagen (se puede especificar la cantidad
+#   en funcion de la imagen con el parametro 'weights'. Y acotar la cantidad de muestras con el
+#   param 'total_sample_wished'
+# Y finalmente con todas esas samples arma la matriz X y la Y como la esperan los algoritmos
+#   de ML. (Los datos de un patch por columna)
+#
 class SimpleDtiMlDataBuilder:
     #
     # weights = {nombre_imagen: n} --> n < 1 que porcentaje del total_sample_wished seran de esa imagen
