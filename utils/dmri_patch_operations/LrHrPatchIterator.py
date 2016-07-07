@@ -29,9 +29,10 @@ class LrHrPatchIterator(object):
                 for k in range(0, self.shapeLrImg[2] - self.patchN1 + 1):
 
                     #sum = sum + 1
-                    x = (i + 2) * self.patchN2;
-                    y = (j + 2) * self.patchN2;
-                    z = (k + 2) * self.patchN2;
+                    # Coordinate voxels in HR
+                    x = (i + self.n) * self.patchN2;
+                    y = (j + self.n) * self.patchN2;
+                    z = (k + self.n) * self.patchN2;
 
                     #unos = np.ones((self.patchN2, self.patchN2, self.patchN2))
                     #sum_acum = sum_acum + unos.sum()

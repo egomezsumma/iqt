@@ -8,10 +8,12 @@ from utils.img_utils import downsampling
 #  if scale=0.5 --> el doble
 class LrHrDmriRandomSampleCreator(object):
 
-    def __init__(self,lr_hr_img,  n, m):
-        self._name = lr_hr_img.name;
-        self.img_hr_data = lr_hr_img.get_hr_img();
-        self.gtab = lr_hr_img.get_gtab();
+    def __init__(self, lr_hr_img, n, m):
+        ''' > lr_hr_img: Objeto con imagenes en LR y HR
+            > n, m: parametros para el tamano del patch '''
+        self._name = lr_hr_img.name
+        self.img_hr_data = lr_hr_img.get_hr_img()
+        self.gtab = lr_hr_img.get_gtab()
         self.img_lr = lr_hr_img.get_lr_img()
         self.lr_hr_vol_it = DmriLrHrCubicPatchVolumeRandomIndexer(self.img_lr.shape, n, m)
 
@@ -32,9 +34,9 @@ class LrHrDmriRandomSampleCreator(object):
         return self
 
     def next(self):  # Python 3: def __next__(self)
-        indexs  = self.lr_hr_vol_it.next()
-        lr_patch = DmriPatchRef(self.get_lr_img(), indexs['lr'])
-        hr_patch = DmriPatchRef(self.get_hr_img(), indexs['hr'])
+        indices = self.lr_hr_vol_it.next()
+        lr_patch = DmriPatchRef(self.get_lr_img(), indices['lr'])
+        hr_patch = DmriPatchRef(self.get_hr_img(), indices['hr'])
         return lr_patch, hr_patch
 
     def size(self):

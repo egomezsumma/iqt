@@ -13,6 +13,7 @@ class DownsampledImage(object):
         self.gtab = gtab;
         self.scale = scale;
         self.img_lr, self.lr_affine = downsampling(img_hr_data, scale)
+        self.hr_affine = img_hr_data.affine
 
     @property
     def name(self):
@@ -26,3 +27,9 @@ class DownsampledImage(object):
 
     def get_hr_img(self):
         return self.img_hr_data.get_data()
+
+    def get_lr_affine(self):
+        return self.lr_affine;
+
+    def get_hr_affine(self):
+        return self.hr_affine;

@@ -35,7 +35,7 @@ class DmriCubicPatchVolumeRandomIndexer(DmriVolumeRandomIndexer):
 
 
 
-class DmriLrHrCubicPatchVolumeRandomIndexer(object):
+class   DmriLrHrCubicPatchVolumeRandomIndexer(object):
     def __init__(self, img_lr_shape, n, m):
         self.img_lr_shape = img_lr_shape
         self.n = n;
