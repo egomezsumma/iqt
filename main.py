@@ -21,6 +21,10 @@ from utils.persistance.MLPersistence import MLPersistence
 def get_a_patch_to_predict():
     return np.arange(5 * 5 * 5).reshape(5, 5, 5);
 
+def save_nifti(name, data, affine):
+    nifti1img = nib.Nifti1Image(data, affine)
+    nib.save(nifti1img, name+ '.nii.gz')
+
 def load_dmri(n_samples, n , m):
     try:
         N1 = (2 * n + 1) ** 3
@@ -69,13 +73,13 @@ def train(X, Y):
 
 
 name_experiment='experimento1'
-n, m = 2, 2
-n_samples = 20
+n, m = 1, 2
+n_samples = 559
 
+X, Y, lr_hr_imgs = load_dmri(n_samples, n, m)
 
 regr = MLPersistence.load(name_experiment)
-if regr is None or True:
-    X, Y, lr_hr_imgs = load_dmri(n_samples, n, m)
+if regr is None:
 
     ## Entreno con todas las samples menos la ultima que la uso para test
     regr, dmri_X_train , dmri_y_train, dmri_X_test, dmri_y_test = train(X,Y)
@@ -121,10 +125,11 @@ it = LrHrPatchIterator(img_lr_shape, n, m)
 
 img_hr_gtab = img_a_reconstruir.get_gtab();
 dti_model = DtiModel(img_hr_gtab);
+img_lr_dti = dti_model._fit_model(img_lr)
 
 sum=0;
 
-img_lr_dti = dti_model._fit_model(img_lr)
+
 
 start_time = time.time()
 for data_ranges_lr_hr in it :
@@ -184,6 +189,29 @@ img_reconstructed = tenmodel.predict(tensors)
 print 'img_reconstructed', img_reconstructed.shape
 
 
+
+# guardar la grandota antes de tocarla
+#dti_model = DtiModel(img_hr_gtab);
+save_nifti('img_hr', img_a_reconstruir.get_hr_img(), img_a_reconstruir.get_hr_affine())
+
+# predict la grandota)
+tenmodel3 = dti.TensorModel(img_hr_gtab)
+tenfit3 = tenmodel3.fit(img_a_reconstruir.get_hr_img())
+lower_triang3 = tenfit3.lower_triangular()
+tensors3 = dti.eig_from_lo_tri(lower_triang3)
+#img_hr_reconstructed = tenmodel3.predict(tensors3)
+img_hr_reconstructed = tenfit3.predict(img_hr_gtab)
+save_nifti('img_hr_reconstructed', img_hr_reconstructed, img_a_reconstruir.get_hr_affine())
+
+
+
+# predict la chiquita
+tenmodel2 = dti.TensorModel(img_a_reconstruir.get_gtab())
+tensors2 = dti.eig_from_lo_tri(img_lr_dti)
+img_lr_reconstructed = tenmodel2.predict(tensors2)
+save_nifti('img_lr_reconstructed', img_lr_reconstructed, img_a_reconstruir.get_lr_affine())
+
+
 seg = time.time() - start_time
 min = int(seg / 60)
 print("--- time of reconstruction : %d' %d'' --- num. iterations: %d" % (min, seg%60, sum))
@@ -192,6 +220,7 @@ print("--- time of reconstruction : %d' %d'' --- num. iterations: %d" % (min, se
 nifti1img = nib.Nifti1Image(img_reconstructed, img_a_reconstruir.get_hr_affine())
 nib.save(nifti1img, name_experiment + '.nii.gz')
 print 'img_hr_shape=', img_hr_shape, 'img_lr_shape=', img_lr_shape
+
 
 
 
