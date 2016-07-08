@@ -1,4 +1,4 @@
-from utils.RandomRanges import Fixed1DRange, Random3DRange
+from utils.RandomRanges import Fixed1DRange, Random3DRange, All3DRangePosibleNotOverlapping
 
 class DmriVolumeRandomIndexer(object):
 
@@ -23,6 +23,9 @@ class DmriVolumeRandomIndexer(object):
         #return self.img.get_data()[x0:xf, y0:yf, z0:zf, bi];
         return (x0, xf, y0, yf, z0, zf, b0, bf)
 
+    def size(self):
+        return self.volume_strategy.size()
+
 class DmriCubicPatchVolumeRandomIndexer(DmriVolumeRandomIndexer):
 
     def __init__(self, img_shape, patch):
@@ -30,8 +33,8 @@ class DmriCubicPatchVolumeRandomIndexer(DmriVolumeRandomIndexer):
         super(DmriCubicPatchVolumeRandomIndexer, self).__init__(img_shape, vol_strategy)
 
     def _get_volume_strategy(self, img_shape, patch):
-        return Random3DRange(img_shape[0:3], patch, patch, patch)
-
+        #return Random3DRange(img_shape[0:3], patch, patch, patch)
+        return All3DRangePosibleNotOverlapping(img_shape[0:3], patch, patch, patch)
 
 
 
@@ -45,8 +48,8 @@ class   DmriLrHrCubicPatchVolumeRandomIndexer(object):
 
 
     def size(self):
-        return min(self.img_lr_shape)-self.patch
-
+        #return min(self.img_lr_shape)-self.patch
+        return self.dts.size()
 
     def __iter__(self):
         return self
