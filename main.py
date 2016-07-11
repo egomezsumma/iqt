@@ -118,7 +118,7 @@ print 'img_lr_shape', img_lr_shape
 
 sx, sy, sz, _ = img_lr_shape
 
-dti_img_hr = np.zeros((sx*m, sy*m, sz*m, 6));
+dti_img_hr = np.zeros((sx*m, sy*m, sz*m, 6), dtype='float');
 
 ## Creo un iterador sobre la imagen lr
 it = LrHrPatchIterator(img_lr_shape, n, m)
@@ -189,27 +189,29 @@ img_reconstructed = tenmodel.predict(tensors)
 print 'img_reconstructed', img_reconstructed.shape
 
 
+from utils.Dti2Dwi import Dti2Dwi
+dti2dwi = Dti2Dwi(dti_img_hr)
+S0 = img_a_reconstruir.get_hr_img()[:,:,:,0]
+img_reconstructed2 = dti2dwi.predict(img_a_reconstruir.get_gtab(), S0)
 
-# guardar la grandota antes de tocarla
-#dti_model = DtiModel(img_hr_gtab);
-save_nifti('img_hr', img_a_reconstruir.get_hr_img(), img_a_reconstruir.get_hr_affine())
+
 
 # predict la grandota)
-tenmodel3 = dti.TensorModel(img_hr_gtab)
-tenfit3 = tenmodel3.fit(img_a_reconstruir.get_hr_img())
-lower_triang3 = tenfit3.lower_triangular()
-tensors3 = dti.eig_from_lo_tri(lower_triang3)
+#tenmodel3 = dti.TensorModel(img_hr_gtab)
+#tenfit3 = tenmodel3.fit(img_a_reconstruir.get_hr_img())
+#lower_triang3 = tenfit3.lower_triangular()
+#tensors3 = dti.eig_from_lo_tri(lower_triang3)
 #img_hr_reconstructed = tenmodel3.predict(tensors3)
-img_hr_reconstructed = tenfit3.predict(img_hr_gtab)
-save_nifti('img_hr_reconstructed', img_hr_reconstructed, img_a_reconstruir.get_hr_affine())
+#img_hr_reconstructed = tenfit3.predict(img_hr_gtab)
+#save_nifti('img_hr_reconstructed', img_hr_reconstructed, img_a_reconstruir.get_hr_affine())
 
 
 
 # predict la chiquita
-tenmodel2 = dti.TensorModel(img_a_reconstruir.get_gtab())
-tensors2 = dti.eig_from_lo_tri(img_lr_dti)
-img_lr_reconstructed = tenmodel2.predict(tensors2)
-save_nifti('img_lr_reconstructed', img_lr_reconstructed, img_a_reconstruir.get_lr_affine())
+#tenmodel2 = dti.TensorModel(img_a_reconstruir.get_gtab())
+#tensors2 = dti.eig_from_lo_tri(img_lr_dti)
+#img_lr_reconstructed = tenmodel2.predict(tensors2)
+#save_nifti('img_lr_reconstructed', img_lr_reconstructed, img_a_reconstruir.get_lr_affine())
 
 
 seg = time.time() - start_time
@@ -219,13 +221,28 @@ print("--- time of reconstruction : %d' %d'' --- num. iterations: %d" % (min, se
 # guardar el resultado
 nifti1img = nib.Nifti1Image(img_reconstructed, img_a_reconstruir.get_hr_affine())
 nib.save(nifti1img, name_experiment + '.nii.gz')
+
+
+nifti1img = nib.Nifti1Image(img_reconstructed2, img_a_reconstruir.get_hr_affine())
+nib.save(nifti1img, name_experiment + '_reconsManual.nii.gz')
+
+
 print 'img_hr_shape=', img_hr_shape, 'img_lr_shape=', img_lr_shape
 
 
 
+img_reconstructed3 = np.zeros((img_reconstructed.shape), dtype='float')
+sx, sy, sz , _ = img_reconstructed.shape
+for i in range(0, sx):
+    for j in range(0, sy):
+        for k in range(0, sz):
+            img_reconstructed3[i,j,k,:] = S0[i][j][k] * img_reconstructed[i,j,k,:]
+
+nifti1img = nib.Nifti1Image(img_reconstructed3, img_a_reconstruir.get_hr_affine())
+nib.save(nifti1img, name_experiment + '_multiplicadaPorS0.nii.gz')
 
 
-# ???? ESTA VALIDACION NO ME DA #######################
+            # ???? ESTA VALIDACION NO ME DA #######################
 #print sum, sum*8, (img_hr_shape[0]-5)*(img_hr_shape[1]-5)*(img_hr_shape[2]-5)
 #print img_hr_shape[0]-8,img_hr_shape[1]-8,img_hr_shape[2]-8
 
