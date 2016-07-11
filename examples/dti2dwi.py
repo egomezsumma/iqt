@@ -3,6 +3,8 @@ import nibabel as nib
 import dipy.reconst.dti as dti
 from utils.DataGetter import DataGetter
 
+from utils.Dti2Dwi import Dti2Dwi
+
 
 def calculateB(bvals, bvecs):
     size, _ = bvecs.shape
@@ -30,6 +32,14 @@ dwi_orig = img.get_data()
 tenmodel = dti.TensorModel(gtab)
 dti = tenmodel.fit(dwi_orig, mask=dwi_orig[..., 0] > 200)
 
+######
+
+dti2dwi=Dti2Dwi(dti.lower_triangular())
+S0 = dwi_orig[:,:,:,0]
+dwi3 = dti2dwi.predict(gtab,S0)
+save_nifti('prueba_reconstruccion3', dwi3, img.affine)
+
+#########
 
 sx, sy, sz, bvals_size = img.shape
 

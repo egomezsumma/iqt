@@ -28,7 +28,7 @@ def downsampling(img, scale):
 # de Kx1 (con k = N*M)
 def __column_this(matrix):
     res = matrix2vector(matrix)
-    return np.array([res]).T
+    return np.array([res], dtype='float').T
 
 
 # Dada una matriz de NxM y la convierte en una
@@ -36,7 +36,7 @@ def __column_this(matrix):
 # new_column  tiene que ser de PxQ con P*Q=N
 def __append_column(matrix, new_column):
     b1 = matrix2vector(new_column)
-    return np.append(matrix, np.array([b1]).T, axis=1)
+    return np.append(matrix, np.array([b1], dtype='float').T, axis=1)
 
 
 # Dada una matriz de NxM la aplana en una de Px1
@@ -48,7 +48,7 @@ def __matrix2vector(matrix):
 # de Kx1 (con k = N*M)
 def column_this(matrix):
     #return matrix.reshape(-1).T
-    return np.array([matrix.reshape(-1)]).T
+    return np.array([matrix.reshape(-1)], dtype='float').T
 
 
 # Dada una matriz de NxM y la convierte en una
@@ -56,7 +56,7 @@ def column_this(matrix):
 # new_column  tiene que ser de PxQ con P*Q=N
 def append_column(matrix, new_column):
     b1 = matrix2vector(new_column)
-    return np.append(matrix, np.array([b1]).T, axis=1)
+    return np.append(matrix, np.array([b1], dtype='float').T, axis=1)
 
 
 # Dada una matriz de NxM la aplana en una de Px1

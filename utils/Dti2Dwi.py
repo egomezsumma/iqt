@@ -50,6 +50,8 @@ class Dti2Dwi(object):
         return D[..., self._lt_indices]
 
 
+
+
     def predict(self, gtab, S0=1, step=None):
         dti = self._dti
         sx, sy, sz = dti.shape[0:3]
@@ -71,6 +73,12 @@ class Dti2Dwi(object):
                     #dwi[i][j][k] = np.zeros(bvals_size, dtype=float)
                     for z in range(0, bvals_size):
                         dwi[i][j][k][z] = np.exp((-1)*np.dot(BD[z], B[z])) * S0[i][j][k]
+        # Saco ceros e infinitos
+        dwi[np.isnan(dwi)] = 0
+        dwi[np.isposinf(dwi)] = np.nan
+        dwi[np.isnan(dwi)] = np.nanmax(dwi)
+        dwi[np.isneginf(dwi)] = np.nan
+        dwi[np.isnan(dwi)] = np.nanmin(dwi)
         return dwi
 
 

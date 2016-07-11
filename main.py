@@ -179,20 +179,46 @@ print 'dti_img_hr=', dti_img_hr.shape
 
 start_time = time.time()
 
+
+st = time.time()
 ## Agarrar el fiteo y pasarlo a imagen
 tenmodel = dti.TensorModel(img_a_reconstruir.get_gtab())
 #tensors = dti.from_lower_triangular(dti_img_hr)
 # (12 dti params --eval--evecs--)
 tensors = dti.eig_from_lo_tri(dti_img_hr)
-print 'tensors', tensors.shape
 img_reconstructed = tenmodel.predict(tensors)
-print 'img_reconstructed', img_reconstructed.shape
+
+seg = time.time() - st
+min = int(seg / 60)
+print("--- time of dipy dti : %d' %d'' --- " % (min , seg%60))
 
 
+
+
+
+
+st = time.time()
 from utils.Dti2Dwi import Dti2Dwi
 dti2dwi = Dti2Dwi(dti_img_hr)
 S0 = img_a_reconstruir.get_hr_img()[:,:,:,0]
 img_reconstructed2 = dti2dwi.predict(img_a_reconstruir.get_gtab(), S0)
+
+maximo = np.max(img_reconstructed2)
+print 'img_reconstructed2 : ',np.min(img_reconstructed2), maximo
+print 'inf: ', np.sum(np.isposinf(img_reconstructed2)), '-inf: ', np.sum(np.isneginf(img_reconstructed2)), ' Nan: ', np.sum(np.isnan(img_reconstructed2))
+print 'uniques=', np.unique(img_reconstructed2).size
+print 'histograma=', np.histogram(img_reconstructed2.reshape(-1))
+
+img_reconstructed2 = (255.0/maximo) * img_reconstructed2
+
+
+print 'img_reconstructed2*255 : ',np.min(img_reconstructed2), np.max(img_reconstructed2)
+print 'inf: ', np.sum(np.isposinf(img_reconstructed2)), '-inf: ', np.sum(np.isneginf(img_reconstructed2)), ' Nan: ', np.sum(np.isnan(img_reconstructed2))
+print 'uniques=', np.unique(img_reconstructed2).size
+
+seg = time.time() - st
+min = int(seg / 60)
+print("--- time of craft dti : %d' %d'' --- " % (min , seg%60))
 
 
 
@@ -242,7 +268,13 @@ nifti1img = nib.Nifti1Image(img_reconstructed3, img_a_reconstruir.get_hr_affine(
 nib.save(nifti1img, name_experiment + '_multiplicadaPorS0.nii.gz')
 
 
-            # ???? ESTA VALIDACION NO ME DA #######################
+
+img_reconstructed4 = tenmodel.predict(tensors, S0)
+nifti1img = nib.Nifti1Image(img_reconstructed4, img_a_reconstruir.get_hr_affine())
+nib.save(nifti1img, name_experiment + '_dipyConS0.nii.gz')
+
+
+# ???? ESTA VALIDACION NO ME DA #######################
 #print sum, sum*8, (img_hr_shape[0]-5)*(img_hr_shape[1]-5)*(img_hr_shape[2]-5)
 #print img_hr_shape[0]-8,img_hr_shape[1]-8,img_hr_shape[2]-8
 
