@@ -1,6 +1,7 @@
 import numpy as np;
 import matplotlib.pyplot as plt
 
+
 # input:
 #      img:{get_data,get_affine, get_header:{get_zooms,...} }
 #      scale: R
@@ -85,3 +86,29 @@ def padding(matrix, pading_size, value=0):
     pad_dim = ((pading_size,pading_size),(pading_size,pading_size), (pading_size,pading_size), (0,0))
     res = np.lib.pad(matrix, pad_dim, 'constant', constant_values=(value,))
     return res
+
+
+def _is(volumen, y=2, b=0, inter='none', cmap='gray'):
+    plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    plt.colorbar()
+
+
+def _isc(vol1, vol2, y=2, b=0, inter='none', cmap='gray'):
+    # plt.figure('Showing the datasets')
+    plt.subplot(1, 2, 1).set_axis_off()
+    plt.imshow(np.rot90(vol1[:, vol1.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    plt.subplot(1, 2, 2).set_axis_off()
+    plt.imshow(np.rot90(vol2[:, vol2.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    plt.show()
+    plt.colorbar()
+
+def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray'):
+    # plt.figure('Showing the datasets')
+    plt.subplot(1, 3, 1).set_axis_off()
+    plt.imshow(np.rot90(vol1[:, vol1.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    plt.subplot(1, 3, 2).set_axis_off()
+    plt.imshow(np.rot90(vol2[:, vol2.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    plt.subplot(1, 3, 3).set_axis_off()
+    plt.imshow(np.rot90(vol3[:, vol3.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    plt.show()
+    plt.colorbar()

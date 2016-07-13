@@ -1,25 +1,35 @@
 import dipy.reconst.dti as dti
 import numpy as np
 import nibabel as nib
-import matplotlib.pyplot as plt
 import time
 
-from sklearn import datasets, linear_model
+from sklearn import linear_model
 
 from utils.DataGetter import DataGetter
 from utils.DownsampledImage import DownsampledImage
 from utils.DmriSampleCreators import LrHrDmriRandomSampleCreator
 from utils.dmri_patch_operations.LrHrPatchIterator import LrHrPatchIterator
-from utils.dmri_patch_operations.DmriPatch import DmriPatch
 from utils.dmri_patch_operations.DtiModel import DtiModel
 from utils.img_utils import column_this, padding
 from utils.ml.MLDataBuilder import SimpleDtiMlDataBuilder
 from utils.persistance.MLPersistence import MLPersistence
 
+import matplotlib.pyplot as plt
+from utils.dmri_patch_operations.DmriPatch import DmriPatch
+
 
 ## Mock methodsfrom utils.ml.MLDataBuilder import SimpleDtiMlDataBuilder
 def get_a_patch_to_predict():
     return np.arange(5 * 5 * 5).reshape(5, 5, 5);
+
+def print_info(img_recons, name):
+    print name, ': (min:max)', np.min(img_recons), ':',np.max(img_recons), 'ptp:', np.ptp(img_recons)
+    print '#inf: ', np.sum(np.isposinf(img_recons)), '#-inf: ', np.sum(
+        np.isneginf(img_recons)), ' #Nan: ', np.sum(np.isnan(img_recons))
+    print '#uniques=', np.unique(img_recons).size
+    print 'histograma=', np.histogram(img_recons.reshape(-1))
+    print 'dtype', img_recons.dtype
+    print
 
 def save_nifti(name, data, affine):
     nifti1img = nib.Nifti1Image(data, affine)
@@ -107,17 +117,12 @@ img_a_reconstruir = lr_hr_imgs[0];
 ## Hacerle el pading
 img_lr = padding(img_a_reconstruir.get_lr_img(), 2)
 
-
 ## Shape de las imagenes
 img_hr_shape = img_a_reconstruir.get_hr_img().shape
 img_lr_shape = img_lr.shape
-print 'img_lr_shape', img_lr_shape
 
 ## Armo el esqueleto de la dti-imagen
-# ???????????? no entiendo porque necesita 2*m mas ???????????????
-
 sx, sy, sz, _ = img_lr_shape
-
 dti_img_hr = np.zeros((sx*m, sy*m, sz*m, 6), dtype='float');
 
 ## Creo un iterador sobre la imagen lr
@@ -128,9 +133,6 @@ dti_model = DtiModel(img_hr_gtab);
 img_lr_dti = dti_model._fit_model(img_lr)
 
 sum=0;
-
-
-
 start_time = time.time()
 for data_ranges_lr_hr in it :
     sum=sum+1;
@@ -139,7 +141,7 @@ for data_ranges_lr_hr in it :
     x0, xf, y0, yf, z0, zf = data_ranges_lr_hr['lr']
 
     # Fiteo el modelo del patch-lr (6 params dti)
-    dti_patch_vol = img_lr_dti[x0:xf, y0: yf, z0:zf]
+    dti_patch_vol = img_lr_dti[x0:xf, y0:yf, z0:zf]
 
     x_vol = dti_patch_vol #dti_model.get_dti_params(dti_patch_vol)
 
@@ -179,7 +181,6 @@ print 'dti_img_hr=', dti_img_hr.shape
 
 start_time = time.time()
 
-
 st = time.time()
 ## Agarrar el fiteo y pasarlo a imagen
 tenmodel = dti.TensorModel(img_a_reconstruir.get_gtab())
@@ -192,8 +193,7 @@ seg = time.time() - st
 min = int(seg / 60)
 print("--- time of dipy dti : %d' %d'' --- " % (min , seg%60))
 
-
-
+print_info(img_reconstructed, 'img_reconstructed')
 
 
 
@@ -245,6 +245,7 @@ min = int(seg / 60)
 print("--- time of reconstruction : %d' %d'' --- num. iterations: %d" % (min, seg%60, sum))
 
 # guardar el resultado
+img_reconstructed = 255*img_reconstructed
 nifti1img = nib.Nifti1Image(img_reconstructed, img_a_reconstruir.get_hr_affine())
 nib.save(nifti1img, name_experiment + '.nii.gz')
 
