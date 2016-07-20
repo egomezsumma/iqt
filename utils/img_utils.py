@@ -75,18 +75,19 @@ def plot_this(x,y, model):
     plt.yticks(())
 
     plt.show()
-def padding(matrix, pading_size, value=0):
-    pad_dim = ((pading_size,pading_size),(pading_size,pading_size), (pading_size,pading_size), (0,0))
-    res = np.lib.pad(matrix, pad_dim, 'constant', constant_values=(value,))
-    return res
-
-
 
 def padding(matrix, pading_size, value=0):
     pad_dim = ((pading_size,pading_size),(pading_size,pading_size), (pading_size,pading_size), (0,0))
     res = np.lib.pad(matrix, pad_dim, 'constant', constant_values=(value,))
     return res
 
+
+"""
+def padding(matrix, pading_size, value=0):
+    pad_dim = ((pading_size,pading_size),(pading_size,pading_size), (pading_size,pading_size), (0,0))
+    res = np.lib.pad(matrix, pad_dim, 'constant', constant_values=(value,))
+    return res
+"""
 
 def _is(volumen, y=2, b=0, inter='none', cmap='gray'):
     plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
