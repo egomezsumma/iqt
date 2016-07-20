@@ -91,6 +91,7 @@ def padding(matrix, pading_size, value=0):
 
 def _is(volumen, y=2, b=0, inter='none', cmap='gray'):
     plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    plt.axis('off')
     plt.colorbar()
 
 

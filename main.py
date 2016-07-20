@@ -83,12 +83,13 @@ def train(X, Y):
 
 
 name_experiment='experimento1'
-n, m = 1, 2
+n, m = 2, 2
 n_samples = 559
 
 X, Y, lr_hr_imgs = load_dmri(n_samples, n, m)
 
-regr = MLPersistence.load(name_experiment)
+#regr = MLPersistence.load(name_experiment)
+regr = None
 if regr is None:
 
     ## Entreno con todas las samples menos la ultima que la uso para test
