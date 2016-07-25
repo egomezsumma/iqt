@@ -95,6 +95,22 @@ def _is(volumen, y=2, b=0, inter='none', cmap='gray'):
     plt.colorbar()
 
 
+
+def _is(volumen, y=2, b=0, inter='none', cmap='gray'):
+    if len(volumen.shape) > 3 :
+        plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    else:
+        plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :]), interpolation=inter, cmap=cmap)
+    plt.axis('off')
+    plt.colorbar()
+
+
+def _is3d(volumen, y=2, b=0, inter='none', cmap='gray'):
+    plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :]), interpolation=inter, cmap=cmap)
+    plt.axis('off')
+    plt.colorbar()
+
+
 def _isc(vol1, vol2, y=2, b=0, inter='none', cmap='gray'):
     # plt.figure('Showing the datasets')
     plt.subplot(1, 2, 1).set_axis_off()
