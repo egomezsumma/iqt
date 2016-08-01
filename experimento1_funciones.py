@@ -40,6 +40,11 @@ def load_dmri(n_samples, n , m):
             #DataGetter.SHERBROOKE_3SHELL_DATA #(128, 128, 60, 193)
         ]
 
+        #    ksaknlaknska;
+        #    import numpy.ma as ma
+        #    x = np.array([1, 2, 3, -1, 5])
+        #    mx = ma.masked_array(x, mask=[0, 0, 0, 1, 0])
+
         datas = d.get_data(datas_names)
 
         lr_hr_imgs = [DownsampledImage(name, datas[name]['img'], datas[name]['gtab'], m) for name in datas_names]
