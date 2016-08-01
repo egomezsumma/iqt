@@ -42,3 +42,27 @@ def mse(m1,m2, axis=None):
 def normalize(matrix):
     #norm = np.linalg.norm(matrix)
     return matrix/np.max(matrix)
+
+## Calculo el coef de determinacion
+from scipy import stats
+
+def coef_det_4thdim(x, y, axis=None):
+    cdet = []
+    size = x.shape[3]
+    for i in range(0,size):
+        _x = x[:,:,:,i].reshape(-1)
+        _y = y[:,:,:,i].reshape(-1)
+        slope, intercept, r_value, p_value, std_err = stats.linregress(_x,_y)
+        cdet.append(r_value**2)
+    cdet=np.array(cdet)
+    return cdet
+
+def coef_det(x, y, axis=None):
+    _mse = mse(x, y, axis)
+    varx = np.var(x, axis=axis)
+    cdet=np.divide(_mse, varx)
+    return cdet
+
+
+
+
