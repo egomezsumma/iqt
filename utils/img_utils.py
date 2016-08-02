@@ -43,6 +43,8 @@ def downsampling2(img, scale=2):
 
 
 
+
+
 # Dada una matriz de NxM y la convierte en una
 # de Kx1 (con k = N*M)
 def __column_this(matrix):
@@ -128,20 +130,23 @@ def _is(volumen, y=2, b=0, inter='none', cmap='gray'):
 def _is3d(volumen, y=2, b=0, inter='none', cmap='gray'):
     plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :]), interpolation=inter, cmap=cmap)
     plt.axis('off')
-    plt.colorbar()
+    #plt.colorbar()
     return plt
 
 
-def _isc(vol1, vol2, y=2, b=0, inter='none', cmap='gray'):
+def _isc(vol1, vol2, y=2, b=0, inter='none', cmap='gray',titles=None):
     # plt.figure('Showing the datasets')
     plt.subplot(1, 2, 1).set_axis_off()
     plt.imshow(np.rot90(vol1[:, vol1.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
     plt.subplot(1, 2, 2).set_axis_off()
     plt.imshow(np.rot90(vol2[:, vol2.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
     #plt.colorbar()
+    if titles is not None:
+        plt.subplot(1, 2, 1).set_title(titles[0])
+        plt.subplot(1, 2, 2).set_title(titles[1])
     return plt
 
-def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray'):
+def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray', titles=None):
     # plt.figure('Showing the datasets')
     plt.subplot(1, 3, 1).set_axis_off()
     plt.imshow(np.rot90(vol1[:, vol1.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
@@ -149,8 +154,12 @@ def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray'):
     plt.imshow(np.rot90(vol2[:, vol2.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
     plt.subplot(1, 3, 3).set_axis_off()
     plt.imshow(np.rot90(vol3[:, vol3.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
-    plt.show()
-    plt.colorbar()
+    if titles is not None :
+        plt.subplot(1, 3, 1).set_title(titles[0])
+        plt.subplot(1, 3, 2).set_title(titles[1])
+        plt.subplot(1, 3, 3).set_title(titles[2])
+    #plt.show()
+    #plt.colorbar()
     return plt
 
 
@@ -190,7 +199,7 @@ def buildDownsampligBy2(nx, ny, nz):
 
 
 
-def buildDownsamplig(nx, ny, nz, factor):
+def buildDownsamplig(shape, factor):
     """
     Build the downsamplig matrix for reduce (100/factor)% a 3d image
     use:
@@ -200,6 +209,7 @@ def buildDownsamplig(nx, ny, nz, factor):
     :return: sparce matrix (nx*ny*nz/factor**3, nx*ny*nz)
     """
     from scipy.sparse import lil_matrix
+    nx, ny, nz = shape
     new_nx = nx / factor
     new_ny = ny / factor
     new_nz = nz / factor

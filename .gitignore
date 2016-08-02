@@ -1,7 +1,6 @@
 .idea
 *.pyc
 .ipynb_checkpoints/
-*.ipynb
 *.nii.gz
 *.npy
 *.pkl
