@@ -65,7 +65,32 @@ class Fixed1DRange(object):
             else:
                 raise StopIteration;
 
+        def size(self):
+            return float('Inf') if self.limit < 0 else self.limit
 
+
+
+class Fixed3DRange(object):
+    def __init__(self, x0, xf,y0, yf, z0, zf, limit=-1):
+        self.limit = limit
+        self.range = (x0, xf, y0, yf, z0, zf)
+        self.current = 0;
+
+    def __iter__(self):
+        return self
+
+    def next(self):  # Python 3: def __next__(self)
+        # There's no limit
+        if self.limit < 0:
+            return self.range;
+
+        if self.current <= self.limit:
+            return self.range;
+        else:
+            raise StopIteration;
+
+    def size(self):
+        return float('Inf') if self.limit < 0 else self.limit
 #
 # Dado una shape en 3 dimensiones
 # devuelve paralelepipedos dentro de esa imagen al azar

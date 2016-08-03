@@ -1,7 +1,4 @@
-from DmriVolumesRandomIndexers import DmriLrHrCubicPatchVolumeRandomIndexer
-from utils.dmri_patch_operations.DmriPatch import DmriPatchRef
-from utils.img_utils import downsampling
-from dipy.sims import phantom
+from utils.dmri_patch_operations.DmriPatch import DmriPatchRef, NoisedDmriPatchRef
 
 
 #
@@ -11,17 +8,22 @@ class LrHrDmriRandomSampleCreator(object):
     """
         Dada una DownsampledImage devuelve objetos DmriPatch
         segun la estrategia pasada como parametros
+
+        =[COMPATIVILIDAD PARA ATRAS]:==========================================
+        Equivalente llamarlo
+            antes :
+                LrHrDmriRandomSampleCreator(lr_hr_img, n, m)
+            ahora
+                lr_hr_vol_it = DmriLrHrCubicPatchVolumeRandomIndexer(self.img_lr.shape, n, m)
+                LrHrDmriRandomSampleCreator(lr_hr_img, lr_hr_vol_it)
+        ========================================================================
     """
-    def __init__(self, lr_hr_img, n, m, lr_hr_vol_it=None):
-        ''' > lr_hr_img: Objeto con imagenes en LR y HR
-            > n, m: parametros para el tamano del patch '''
+    def __init__(self, lr_hr_img, lr_hr_vol_it):
         self._name = lr_hr_img.name
         self.img_hr_data = lr_hr_img.get_hr_img()
         self.gtab = lr_hr_img.get_gtab()
         self.img_lr = lr_hr_img.get_lr_img()
         self.lr_hr_vol_it = lr_hr_vol_it
-        if self.lr_hr_vol_it is None:
-            self.lr_hr_vol_it = DmriLrHrCubicPatchVolumeRandomIndexer(self.img_lr.shape, n, m)
 
     @property
     def name(self):
@@ -52,38 +54,24 @@ class LrHrDmriRandomSampleCreator(object):
 
 class NoisedLrHrDmriSampleCreator(LrHrDmriRandomSampleCreator):
     """
-        Dada una DownsampledImage devuelve objetos DmriPatch
-        segun la estrategia pasada como parametros pero con un cierto
+        Idem 'LrHrDmriRandomSampleCreator' pero devuelve patch
+        del tipo 'NoisedDmriPatchRef' con un cierto
         ruido que puede ser 'rician' (default) o 'gausean'
 
         @see dipy.sims.phantom.add_noise
+        @see utils.dmri_patch_operations.DmriPatch.NoisedDmriPatchRef
     """
 
-    def __init__(self, lr_hr_img, n, m, lr_hr_vol_it=None, snr=20, noise_type='rician'):
-        super(NoisedLrHrDmriSampleCreator, self).__init__(lr_hr_img, n, m, lr_hr_vol_it)
+    def __init__(self, lr_hr_img, lr_hr_vol_it, snr=20, noise_type='rician'):
+        super(NoisedLrHrDmriSampleCreator, self).__init__(lr_hr_img, lr_hr_vol_it)
         self._snr = snr
         self._noise_type = noise_type
 
-    def __iter__(self):
-        return self
-
-    def next(self):  # Python 3: def __next__(self)
+    def next(self):
         indices = self.lr_hr_vol_it.next()
-        print indices
-        lr_noised = self._get_volume_noised(self.get_lr_img(), indices['lr'])
-        hr_noised = self._get_volume_noised(self.get_lr_img(), indices['hr'])
-        lr_patch = DmriPatchRef(lr_noised, indices['lr'])
-        hr_patch = DmriPatchRef(hr_noised, indices['hr'])
+        print 'asasasasasasasasasadadad'
+        lr_patch = NoisedDmriPatchRef(self.get_lr_img(), indices['lr'])
+        hr_patch = NoisedDmriPatchRef(self.get_hr_img(), indices['hr'])
         return lr_patch, hr_patch
-
-    def _get_volume_noised(self, data, indexs):
-        (x0, xf, y0, yf, z0, zf, b0, bf) = indexs
-        img = data[x0:xf, y0:yf, z0:zf, b0:bf]
-        noised_img = phantom.add_noise(img, snr=self.self._snr,noise_type=self._noise_type)
-        return noised_img
-
-    def size(self):
-        return self.lr_hr_vol_it.size()
-
 
 
