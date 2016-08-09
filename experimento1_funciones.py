@@ -4,6 +4,8 @@ from utils.DataGetter import DataGetter
 from utils.DownsampledImage import DownsampledImage
 from utils.DmriSampleCreators import LrHrDmriRandomSampleCreator
 from utils.ml.MLDataBuilder import SimpleDtiMlDataBuilder
+#from scipy.sparse import csr_matrix, csc_matrix
+
 
 from sklearn import linear_model
 
@@ -68,7 +70,7 @@ def train(X, Y):
     dmri_y_test = Y.T[-1:]
 
     # Create linear regression object
-    regr = linear_model.LinearRegression()
+    regr = linear_model.LinearRegression(fit_intercept=False)
     #regr = linear_model.Ridge(alpha = .5)
 
 
