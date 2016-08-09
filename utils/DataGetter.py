@@ -1,6 +1,7 @@
 from dipy.data import fetch_stanford_hardi, read_stanford_hardi
 from dipy.segment.mask import median_otsu
 from dipy.reconst.dti import TensorModel
+from dipy.data import read_stanford_labels
 
 
 class DataGetter(object):
@@ -9,13 +10,15 @@ class DataGetter(object):
     ANISO_VOX_DATA = 'aniso_vox';
     TAIWAN_NTU_DSI_DATA = 'taiwan_ntu_dsi';
     ISBI2013_2SHELL_DATA = 'isbi2013_2shell';
+    STANDFORD_HARDI_LABELS = 'standfor_hardi_labels'
 
     DATAS_NAMES = [
         STANDFORD_HARDI_DATA,
         SHERBROOKE_3SHELL_DATA,
         ANISO_VOX_DATA,
         TAIWAN_NTU_DSI_DATA,
-        ISBI2013_2SHELL_DATA
+        ISBI2013_2SHELL_DATA,
+        STANDFORD_HARDI_LABELS
     ]
 
     def __init__(self):
@@ -35,6 +38,11 @@ class DataGetter(object):
                     self._cache[name] = getattr(self, '_get_' + name)();
                 res[name] = self._cache[name]
         return res;
+
+    def _get_standfor_hardi_labels(self):
+        hardi_img, gtab, labels_img = read_stanford_labels()
+        return {'img': hardi_img, 'gtab':gtab, 'labels':labels_img}
+
 
     def _get_standfor_hardi(self):
         fetch_stanford_hardi()

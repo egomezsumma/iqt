@@ -128,6 +128,7 @@ def _is(volumen, y=2, b=0, inter='none', cmap='gray', title=None):
     if title is not None:
         plt.title(title)
     plt.colorbar()
+    print volumen.shape, 'y=', volumen.shape[1]//y
     return plt
 
 
@@ -158,6 +159,9 @@ def _iswr(volumen, rect, y=2, b=0, inter='none', cmap='gray', title=None,linewid
     # Add the patch to the Axes
     ax.add_patch(rectangle)
     plt.show()
+
+    print volumen.shape, 'y=', volumen.shape[1] // y
+
     return plt, fig, ax
 
 
