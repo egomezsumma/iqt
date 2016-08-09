@@ -54,8 +54,6 @@ class SimpleMlDataBuilder:
         x_patch = self.fconvert_model(patch_lr, sample_creator)
         y_patch = self.fconvert_model(patch_hr, sample_creator)
 
-        print type(x_patch), x_patch
-
         first_i = 0
         if X is None:
             first_i = 1
@@ -115,7 +113,7 @@ class SimpleDtiMlDataBuilder:
         return X, Y
 
     def _create_sample_for(self, sample_creator, limit, X=None, Y=None):
-        print "Samples for ", sample_creator.name, ":" , limit, 'of', sample_creator.size();
+        print "Creating amples for", sample_creator.name, ":" , limit, 'of', sample_creator.size();
         arr = [sample_creator.next() for _ in range(0, limit)]
 
         dtim = DtiModel(sample_creator.get_gtab())

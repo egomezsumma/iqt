@@ -28,7 +28,6 @@ class NoisedDmriPatchRef(object):
         self.indexs = indexs
         self._snr = snr
         self._noise_type = noise_type
-        print "asas",self._snr, self._noise_type
 
     def get_volume(self):
         return self._get_volume_noised()
@@ -40,7 +39,7 @@ class NoisedDmriPatchRef(object):
         data = self.img;
         (x0, xf, y0, yf, z0, zf, b0, bf) = self.indexs
         img = data[x0:xf, y0:yf, z0:zf, b0:bf]
-        print self._snr, self._noise_type
+        #noised_img = img
         noised_img = phantom.add_noise(img, snr=self._snr, noise_type=self._noise_type)
         return noised_img
 

@@ -1,6 +1,6 @@
 import numpy as np;
 import matplotlib.pyplot as plt
-
+import matplotlib.patches as patches
 
 # input:
 #      img:{get_data,get_affine, get_header:{get_zooms,...} }
@@ -109,22 +109,98 @@ def padding(matrix, pading_size, value=0):
     return res
 """
 
-def _is(volumen, y=2, b=0, inter='none', cmap='gray'):
+def _is(volumen, y=2, b=0, inter='none', cmap='gray', title=None):
     plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
     plt.axis('off')
+    if title is not None:
+       plt.title(title)
     plt.colorbar()
     return plt
 
 
 
-def _is(volumen, y=2, b=0, inter='none', cmap='gray'):
+def _is(volumen, y=2, b=0, inter='none', cmap='gray', title=None):
     if len(volumen.shape) > 3 :
         plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
     else:
         plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y]), interpolation=inter, cmap=cmap)
     plt.axis('off')
+    if title is not None:
+        plt.title(title)
     plt.colorbar()
     return plt
+
+
+def _iswr(volumen, rect, y=2, b=0, inter='none', cmap='gray', title=None,linewidth=2, edgecolor='w'):
+    """
+    :param volumen: Volumen o imagen a mostrar
+    :param rect: tupe (orig_x, orig_y, width, height)
+    :param y: En donde dividir el volumen, defalut 2 -> es decir se muestra la feta de la mitad en dimension 'y'
+    :param b: Para volumenes con mas de 4 dimensiones. La seleccion de la cuarta dimension (ejemplo que b-valor en dwi)
+    :param inter: Parametro de imshow
+    :param cmap: Parametro de imshow
+    :param title: Titulo de la imagen
+    :return:
+    """
+    fig, ax = plt.subplots(1)
+    if len(volumen.shape) > 3 :
+        ax.imshow(volumen[:, volumen.shape[1] // y, :, b].T, interpolation=inter, cmap=cmap,origin="lower")
+    else:
+        ax.imshow(volumen[:, volumen.shape[1] // y].T, interpolation=inter, cmap=cmap, origin="lower")
+    plt.axis('off')
+
+    if title is not None:
+        plt.title(title)
+
+    rect_t = rect[1], rect[0], rect[3], rect[2]
+    rectangle = patches.Rectangle((rect_t[0], rect_t[1]), rect_t[2], rect_t[3], linewidth=linewidth, edgecolor=edgecolor, facecolor='none')
+
+    # Add the patch to the Axes
+    ax.add_patch(rectangle)
+    plt.show()
+    return plt, fig, ax
+
+
+def __plotOneV2(sp1,sp2, sp3, vol, y , b, inter, cmap, render=None, origin="upper"):
+    if render is None:
+        render = plt
+    if len(vol.shape) > 3:
+        render.subplot(sp1,sp2, sp3).set_axis_off()
+        return render.imshow(vol[:, vol.shape[1] // y, :, b], interpolation=inter, cmap=cmap, origin=origin)
+    else:
+        render.subplot(sp1,sp2,sp3).set_axis_off()
+        return render.imshow(vol[:, vol.shape[1] // y, :], interpolation=inter, cmap=cmap, origin=origin)
+
+
+def _iswrc(vol1, vol2, rect1, rect2, y=2, b=0, inter='none', cmap='gray', title=None,linewidth=2, edgecolor='w'):
+    """
+        idem iswrc con dos volumnes y dos rectangulos
+    """
+    fig, (ax1, ax2) = plt.subplots(2)
+
+    __plotOneV2(1, 3, 1, vol1.T, y, b, inter, cmap, render=plt, origin="lower")
+    __plotOneV2(1, 3, 2, vol2.T, y, b, inter, cmap, render=plt, origin="lower")
+
+    plt.axis('off')
+
+    if title is not None:
+        plt.title(title)
+
+    rect_t1 = rect1[1], rect1[0], rect1[3], rect1[2]
+    rectangle1 = patches.Rectangle((rect_t1[0], rect_t1[1]), rect_t1[2], rect_t1[3], linewidth=linewidth, edgecolor=edgecolor, facecolor='none')
+    # Add the patch to the Axes
+    ax1.add_patch(rectangle1)
+    #plt.subplot(1,3,1).add_patch(rectangle1)
+
+    rect_t2 = rect2[1], rect2[0], rect2[3], rect2[2]
+    rectangle2 = patches.Rectangle((rect_t2[0], rect_t2[1]), rect_t2[2], rect_t2[3], linewidth=linewidth,
+                                   edgecolor=edgecolor, facecolor='none')
+    # Add the patch to the Axes
+    ax2.add_patch(rectangle2)
+    #plt.subplot(1, 3, 2).add_patch(rectangle2)
+
+    plt.show()
+    return plt, fig, (ax1, ax2)
 
 
 def _is3d(volumen, y=2, b=0, inter='none', cmap='gray'):
@@ -148,19 +224,34 @@ def _isc(vol1, vol2, y=2, b=0, inter='none', cmap='gray',titles=None):
 
 def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray', titles=None):
     # plt.figure('Showing the datasets')
+    """
     plt.subplot(1, 3, 1).set_axis_off()
     plt.imshow(np.rot90(vol1[:, vol1.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
     plt.subplot(1, 3, 2).set_axis_off()
     plt.imshow(np.rot90(vol2[:, vol2.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
     plt.subplot(1, 3, 3).set_axis_off()
     plt.imshow(np.rot90(vol3[:, vol3.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    """
+    im1 =__plotOne(1, 3, 1, vol1,y,b,inter,cmap)
+    im2 =__plotOne(1, 3, 2, vol2,y,b,inter,cmap)
+    im3= __plotOne(1, 3, 3, vol3,y,b,inter,cmap)
+
     if titles is not None :
         plt.subplot(1, 3, 1).set_title(titles[0])
         plt.subplot(1, 3, 2).set_title(titles[1])
         plt.subplot(1, 3, 3).set_title(titles[2])
     #plt.show()
     #plt.colorbar()
-    return plt
+    return plt, im1,im2,im3
+
+
+def __plotOne(sp1,sp2,sp3, vol, y , b, inter, cmap):
+    if len(vol.shape) > 3:
+        plt.subplot(sp1,sp2,sp3).set_axis_off()
+        return plt.imshow(np.rot90(vol[:, vol.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    else:
+        plt.subplot(sp1,sp2,sp3).set_axis_off()
+        return plt.imshow(np.rot90(vol[:, vol.shape[1] // y, :]), interpolation=inter, cmap=cmap)
 
 
 def buildDownsampligBy2(nx, ny, nz):

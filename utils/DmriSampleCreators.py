@@ -69,9 +69,8 @@ class NoisedLrHrDmriSampleCreator(LrHrDmriRandomSampleCreator):
 
     def next(self):
         indices = self.lr_hr_vol_it.next()
-        print 'asasasasasasasasasadadad'
-        lr_patch = NoisedDmriPatchRef(self.get_lr_img(), indices['lr'])
-        hr_patch = NoisedDmriPatchRef(self.get_hr_img(), indices['hr'])
+        lr_patch = NoisedDmriPatchRef(self.get_lr_img(), indices['lr'],snr=self._snr, noise_type=self._noise_type)
+        hr_patch = NoisedDmriPatchRef(self.get_hr_img(), indices['hr'],snr=self._snr, noise_type=self._noise_type)
         return lr_patch, hr_patch
 
 
