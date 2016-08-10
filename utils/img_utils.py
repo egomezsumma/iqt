@@ -11,7 +11,11 @@ import matplotlib.patches as patches
 def downsampling(img, scale=2):
     from dipy.align.reslice import reslice
     import numpy as np
-    data = img.get_data()
+
+    data = img
+    if hasattr(img, 'get_data') :
+        data = img.get_data()
+
 
     # hago que sean pares
     for axis, dim in enumerate(data.shape[:3]):
