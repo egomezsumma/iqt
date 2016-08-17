@@ -113,30 +113,30 @@ def padding(matrix, pading_size, value=0):
     return res
 """
 
-def _is(volumen, y=2, b=0, inter='none', cmap='gray', title=None):
-    plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+def _is(volumen, y=2, b=0, inter='none', cmap='gray', title=None,vmin=0, vmax=500):
+    plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap,vmin=vmin, vmax=vmax)
     plt.axis('off')
     if title is not None:
        plt.title(title)
-    plt.colorbar()
+    #plt.colorbar()
     return plt
 
 
 
-def _is(volumen, y=2, b=0, inter='none', cmap='gray', title=None):
+def _is(volumen, y=2, b=0, inter='none', cmap='gray', title=None,vmin=0, vmax=500):
     if len(volumen.shape) > 3 :
-        plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+        plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
     else:
-        plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y]), interpolation=inter, cmap=cmap)
+        plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
     plt.axis('off')
     if title is not None:
         plt.title(title)
-    plt.colorbar()
-    print volumen.shape, 'y=', volumen.shape[1]//y
+    #plt.colorbar()
+    #print volumen.shape, 'y=', volumen.shape[1]//y
     return plt
 
 
-def _iswr(volumen, rect, y=2, b=0, inter='none', cmap='gray', title=None,linewidth=2, edgecolor='w'):
+def _iswr(volumen, rect, y=2, b=0, inter='none', cmap='gray', title=None,linewidth=2, edgecolor='r',vmin=0, vmax=500):
     """
     :param volumen: Volumen o imagen a mostrar
     :param rect: tupe (orig_x, orig_y, width, height)
@@ -149,9 +149,9 @@ def _iswr(volumen, rect, y=2, b=0, inter='none', cmap='gray', title=None,linewid
     """
     fig, ax = plt.subplots(1)
     if len(volumen.shape) > 3 :
-        ax.imshow(volumen[:, volumen.shape[1] // y, :, b].T, interpolation=inter, cmap=cmap,origin="lower")
+        ax.imshow(volumen[:, volumen.shape[1] // y, :, b].T, interpolation=inter, cmap=cmap,origin="lower",vmin=vmin, vmax=vmax)
     else:
-        ax.imshow(volumen[:, volumen.shape[1] // y].T, interpolation=inter, cmap=cmap, origin="lower")
+        ax.imshow(volumen[:, volumen.shape[1] // y].T, interpolation=inter, cmap=cmap, origin="lower",vmin=vmin, vmax=vmax)
     plt.axis('off')
 
     if title is not None:
@@ -169,25 +169,25 @@ def _iswr(volumen, rect, y=2, b=0, inter='none', cmap='gray', title=None,linewid
     return plt, fig, ax
 
 
-def __plotOneV2(sp1,sp2, sp3, vol, y , b, inter, cmap, render=None, origin="upper"):
+def __plotOneV2(sp1,sp2, sp3, vol, y , b, inter, cmap, render=None, origin="upper", vmin=0, vmax=500):
     if render is None:
         render = plt
     if len(vol.shape) > 3:
         render.subplot(sp1,sp2, sp3).set_axis_off()
-        return render.imshow(vol[:, vol.shape[1] // y, :, b], interpolation=inter, cmap=cmap, origin=origin)
+        return render.imshow(vol[:, vol.shape[1] // y, :, b], interpolation=inter, cmap=cmap, origin=origin, vmin=vim, vmax=vmax)
     else:
         render.subplot(sp1,sp2,sp3).set_axis_off()
-        return render.imshow(vol[:, vol.shape[1] // y, :], interpolation=inter, cmap=cmap, origin=origin)
+        return render.imshow(vol[:, vol.shape[1] // y, :], interpolation=inter, cmap=cmap, origin=origin, vmin=vmin, vmax=vmax)
 
 
-def _iswrc(vol1, vol2, rect1, rect2, y=2, b=0, inter='none', cmap='gray', title=None,linewidth=2, edgecolor='w'):
+def _iswrc(vol1, vol2, rect1, rect2, y=2, b=0, inter='none', cmap='gray', title=None,linewidth=2, edgecolor='r',vmin=0, vmax=500):
     """
         idem iswrc con dos volumnes y dos rectangulos
     """
     fig, (ax1, ax2) = plt.subplots(2)
 
-    __plotOneV2(1, 3, 1, vol1.T, y, b, inter, cmap, render=plt, origin="lower")
-    __plotOneV2(1, 3, 2, vol2.T, y, b, inter, cmap, render=plt, origin="lower")
+    __plotOneV2(1, 3, 1, vol1.T, y, b, inter, cmap, render=plt, origin="lower", vmin=vmin, vmax=vmax)
+    __plotOneV2(1, 3, 2, vol2.T, y, b, inter, cmap, render=plt, origin="lower", vmin=vmin, vmax=vmax)
 
     plt.axis('off')
 
@@ -211,26 +211,26 @@ def _iswrc(vol1, vol2, rect1, rect2, y=2, b=0, inter='none', cmap='gray', title=
     return plt, fig, (ax1, ax2)
 
 
-def _is3d(volumen, y=2, b=0, inter='none', cmap='gray'):
-    plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :]), interpolation=inter, cmap=cmap)
+def _is3d(volumen, y=2, b=0, inter='none', cmap='gray', vmin=0, vmax=500):
+    plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
     plt.axis('off')
     #plt.colorbar()
     return plt
 
 
-def _isc(vol1, vol2, y=2, b=0, inter='none', cmap='gray',titles=None):
+def _isc(vol1, vol2, y=2, b=0, inter='none', cmap='gray',titles=None, vmin=0, vmax=500):
     # plt.figure('Showing the datasets')
     plt.subplot(1, 2, 1).set_axis_off()
-    plt.imshow(np.rot90(vol1[:, vol1.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    plt.imshow(np.rot90(vol1[:, vol1.shape[1] // y, :, b]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
     plt.subplot(1, 2, 2).set_axis_off()
-    plt.imshow(np.rot90(vol2[:, vol2.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+    plt.imshow(np.rot90(vol2[:, vol2.shape[1] // y, :, b]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
     #plt.colorbar()
     if titles is not None:
         plt.subplot(1, 2, 1).set_title(titles[0])
         plt.subplot(1, 2, 2).set_title(titles[1])
     return plt
 
-def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray', titles=None):
+def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray', titles=None,vmin=0, vmax=500):
     # plt.figure('Showing the datasets')
     """
     plt.subplot(1, 3, 1).set_axis_off()
@@ -240,9 +240,9 @@ def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray', titles=None):
     plt.subplot(1, 3, 3).set_axis_off()
     plt.imshow(np.rot90(vol3[:, vol3.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
     """
-    im1 =__plotOne(1, 3, 1, vol1,y,b,inter,cmap)
-    im2 =__plotOne(1, 3, 2, vol2,y,b,inter,cmap)
-    im3= __plotOne(1, 3, 3, vol3,y,b,inter,cmap)
+    im1 =__plotOne(1, 3, 1, vol1,y,b,inter,cmap,vmin=vmin, vmax=vmax)
+    im2 =__plotOne(1, 3, 2, vol2,y,b,inter,cmap,vmin=vmin, vmax=vmax)
+    im3= __plotOne(1, 3, 3, vol3,y,b,inter,'Blues',vmin=-2, vmax=1)
 
     if titles is not None :
         plt.subplot(1, 3, 1).set_title(titles[0])
@@ -253,13 +253,13 @@ def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray', titles=None):
     return plt, im1,im2,im3
 
 
-def __plotOne(sp1,sp2,sp3, vol, y , b, inter, cmap):
+def __plotOne(sp1,sp2,sp3, vol, y , b, inter, cmap,vmin=0, vmax=500):
     if len(vol.shape) > 3:
         plt.subplot(sp1,sp2,sp3).set_axis_off()
-        return plt.imshow(np.rot90(vol[:, vol.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
+        return plt.imshow(np.rot90(vol[:, vol.shape[1] // y, :, b]), interpolation=inter, cmap=cmap,vmin=vmin, vmax=vmax)
     else:
         plt.subplot(sp1,sp2,sp3).set_axis_off()
-        return plt.imshow(np.rot90(vol[:, vol.shape[1] // y, :]), interpolation=inter, cmap=cmap)
+        return plt.imshow(np.rot90(vol[:, vol.shape[1] // y, :]), interpolation=inter, cmap=cmap,vmin=vmin, vmax=vmax)
 
 
 def buildDownsampligBy2(nx, ny, nz):
