@@ -60,7 +60,7 @@ def load_dmri(n_samples, n , m):
         print e;
 
 
-def train(X, Y):
+def train(X, Y, verbose=False):
     # Split the data into training/testing sets
     dmri_X_train = X.T[:-1]
     dmri_X_test = X.T[-1:]
@@ -75,7 +75,9 @@ def train(X, Y):
 
 
     # Train the model using the training sets
-    print 'Training set_training.shape=', dmri_X_train.T.shape, ' ->target.shape=', dmri_y_train.T.shape
+    if verbose :
+        print 'Training set_training.shape=', dmri_X_train.T.shape, ' ->target.shape=', dmri_y_train.T.shape
+
     try:
         regr.fit(dmri_X_train, dmri_y_train)
     except RuntimeError as e:
