@@ -61,9 +61,11 @@ bvals = [1000, 2000, 3000]
 img, gtab = read_cenir_multib(bvals)
 big_delta = 0.0365  # seconds
 small_delta = 0.0157  # seconds
+
 gtab = gradient_table(bvals=gtab.bvals, bvecs=gtab.bvecs,
                       small_delta=big_delta,
                       big_delta=small_delta)
+
 data = img.get_data()
 data_small = data[40:65, 50:51, 35:60]
 

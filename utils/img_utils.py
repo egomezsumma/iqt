@@ -67,13 +67,13 @@ def __append_column(matrix, new_column):
 # Dada una matriz de NxM la aplana en una de Px1
 # con P=N*M
 def __matrix2vector(matrix):
-    return np.reshape(matrix, matrix.size);
+    return np.reshape(matrix, matrix.size, order='F');
 
 # Dada una matriz de NxM y la convierte en una
 # de Kx1 (con k = N*M)
 def column_this(matrix):
     #return matrix.reshape(-1).T
-    return np.array([matrix.reshape(-1)], dtype='float').T
+    return np.array([matrix.reshape(-1, order='F')], dtype='float').T
 
 
 # Dada una matriz de NxM y la convierte en una
@@ -87,7 +87,7 @@ def append_column(matrix, new_column):
 # Dada una matriz de NxM la aplana en una de Px1
 # con P=N*M
 def matrix2vector(matrix):
-    return np.reshape(matrix, matrix.size);
+    return np.reshape(matrix, matrix.size, order='F');
 
 def plot_this(x,y, model):
     plt.scatter(x, y,  color='black')
@@ -113,8 +113,11 @@ def padding(matrix, pading_size, value=0):
     return res
 """
 
-def _is(volumen, y=2, b=0, inter='none', cmap='gray', title=None,vmin=0, vmax=500):
-    plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap,vmin=vmin, vmax=vmax)
+def _is(volumen, y=-1, b=0, inter='none', cmap='gray', title=None,vmin=None, vmax=None):
+    if y <= 0 :
+        y = volumen.shape[1] // 2
+
+    plt.imshow(np.rot90(volumen[:,y, :, b]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
     plt.axis('off')
     if title is not None:
        plt.title(title)
@@ -218,12 +221,22 @@ def _is3d(volumen, y=2, b=0, inter='none', cmap='gray', vmin=0, vmax=500):
     return plt
 
 
-def _isc(vol1, vol2, y=2, b=0, inter='none', cmap='gray',titles=None, vmin=0, vmax=500):
+def _isc(vol1, vol2, y=-1, yp=-1, b=0, inter='none', cmap='gray',titles=None, vmin=0, vmax=500):
+
+    if y <= 0 and yp <= 0 :
+        y1 = vol1.shape[1] // 2
+        y2 = vol2.shape[1] // 2
+    elif y >= 0:
+        y1 = y2 = y
+    else:
+        y1 = vol1.shape[1] // yp
+        y2 = vol2.shape[1] // yp
+
     # plt.figure('Showing the datasets')
     plt.subplot(1, 2, 1).set_axis_off()
-    plt.imshow(np.rot90(vol1[:, vol1.shape[1] // y, :, b]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
+    plt.imshow(np.rot90(vol1[:, y1, :, b]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
     plt.subplot(1, 2, 2).set_axis_off()
-    plt.imshow(np.rot90(vol2[:, vol2.shape[1] // y, :, b]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
+    plt.imshow(np.rot90(vol2[:, y2, :, b]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
     #plt.colorbar()
     if titles is not None:
         plt.subplot(1, 2, 1).set_title(titles[0])

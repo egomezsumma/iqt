@@ -10,7 +10,7 @@ from dipy.reconst.shm import real_sph_harm, sph_harm_ind_list
 import dipy.reconst.dti as dti
 from warnings import warn
 from dipy.core.gradients import gradient_table
-from ..utils.optpkg import optional_package
+from dipy.utils.optpkg import optional_package
 from dipy.core.optimize import Optimizer
 
 cvxopt, have_cvxopt, _ = optional_package("cvxopt")
@@ -310,7 +310,7 @@ class MapmriModel(Cache):
                 lopt = self.laplacian_weighting
                 coef = np.dot(self.MMt_inv_Mt, data)
                 coef = coef / sum(coef * self.Bm)
-                return MapmriFit(self, coef, self.mu, R, lopt)
+                return MapmriFit(self, coef, self.mu, R, lopt, errorcode)
             except AttributeError:
                 try:
                     M = self.M
@@ -386,12 +386,16 @@ class MapmriModel(Cache):
             p = cvxopt.matrix(np.ascontiguousarray(
                 -1 * np.dot(Mprime.T, data_single_b0))
             )
+
+            #print 'entro deonde queria'
             G = cvxopt.matrix(-1 * K)
             h = cvxopt.matrix((1e-10) * np.ones((K.shape[0])), (K.shape[0], 1))
             A = cvxopt.matrix(np.ascontiguousarray(M0_mean))
             b = cvxopt.matrix(np.array([1.]))
+
             cvxopt.solvers.options['show_progress'] = False
             try:
+
                 sol = cvxopt.solvers.qp(Q, p, G, h, A, b)
                 coef = np.array(sol['x'])[:, 0]
             except ValueError:
@@ -402,9 +406,11 @@ class MapmriModel(Cache):
                 except np.linalg.linalg.LinAlgError:
                     errorcode = 3
                     coef = np.zeros(M.shape[1])
+                    print 'as2'
                     return MapmriFit(self, coef, mu, R, lopt, errorcode)
 
         else:
+            print 'NO entro deonde queria'
             try:
                 pseudoInv = np.dot(
                     np.linalg.inv(np.dot(M.T, M) + lopt * laplacian_matrix), M.T)
@@ -444,7 +450,6 @@ class MapmriFit(ReconstFit):
             that after positivity constraint failed, also matrix inversion
             failed.
         """
-
         self.model = model
         self._mapmri_coef = mapmri_coef
         self.gtab = model.gtab
@@ -913,6 +918,7 @@ class MapmriFit(ReconstFit):
             q_rot = np.dot(q, self.R)
             M = mapmri_phi_matrix(self.radial_order, self.mu, q_rot)
         else:
+            print 'por calcular M'
             M = mapmri_isotropic_phi_matrix(self.radial_order, self.mu[0], q)
 
         E = S0 * np.dot(M, self._mapmri_coef)
