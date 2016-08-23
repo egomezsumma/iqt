@@ -261,6 +261,7 @@ class MapmriModel(Cache):
                                      bvecs=self.gtab.bvecs[self.cutoff])
         self.tenmodel = dti.TensorModel(gtab_cutoff)
 
+        #print 'self.anisotropic_scaling:', self.anisotropic_scaling
         if self.anisotropic_scaling:
             self.ind_mat = mapmri_index_matrix(self.radial_order)
             self.Bm = b_mat(self.ind_mat)
@@ -274,13 +275,16 @@ class MapmriModel(Cache):
 
             qvals = np.sqrt(self.gtab.bvals / self.tau) / (2 * np.pi)
             q = gtab.bvecs * qvals[:, None]
+            #print 'self.dti_scale_estimation:', self.dti_scale_estimation
             if self.dti_scale_estimation:
                 self.M_mu_independent = mapmri_isotropic_M_mu_independent(
                     self.radial_order, q)
             else:
                 D = static_diffusivity
                 mumean = np.sqrt(2 * D * self.tau)
+
                 self.mu = np.array([mumean, mumean, mumean])
+                #print 'mu', self.mu
                 self.M = mapmri_isotropic_phi_matrix(radial_order, mumean, q)
                 if (self.laplacian_regularization and
                    isinstance(laplacian_weighting, float) and
@@ -406,11 +410,11 @@ class MapmriModel(Cache):
                 except np.linalg.linalg.LinAlgError:
                     errorcode = 3
                     coef = np.zeros(M.shape[1])
-                    print 'as2'
+                    #print 'as2'
                     return MapmriFit(self, coef, mu, R, lopt, errorcode)
 
         else:
-            print 'NO entro deonde queria'
+            #print 'NO entro deonde queria'
             try:
                 pseudoInv = np.dot(
                     np.linalg.inv(np.dot(M.T, M) + lopt * laplacian_matrix), M.T)
@@ -918,7 +922,7 @@ class MapmriFit(ReconstFit):
             q_rot = np.dot(q, self.R)
             M = mapmri_phi_matrix(self.radial_order, self.mu, q_rot)
         else:
-            print 'por calcular M'
+            #print 'por calcular M'
             M = mapmri_isotropic_phi_matrix(self.radial_order, self.mu[0], q)
 
         E = S0 * np.dot(M, self._mapmri_coef)
