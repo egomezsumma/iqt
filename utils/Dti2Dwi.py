@@ -81,9 +81,6 @@ class Dti2Dwi(object):
         dwi[np.isnan(dwi)] = np.nanmin(dwi)
         return dwi
 
-import cvxpy
-cvxpy.sum_squares()
-
     def _calculateB(self, bvals, bvecs):
         size, _ = bvecs.shape
         res = np.zeros((size, 3), dtype='float')

@@ -202,7 +202,7 @@ class MapmriModel(Cache):
         mapfit = map_model.fit(data)
         odf= mapfit.odf(sphere)
         """
-
+        self.mu = None
         self.bvals = gtab.bvals
         self.bvecs = gtab.bvecs
         self.gtab = gtab
@@ -426,6 +426,7 @@ class MapmriModel(Cache):
 
         coef = coef / sum(coef * self.Bm)
 
+        self.mu = mu
         return MapmriFit(self, coef, mu, R, lopt, errorcode)
 
 
@@ -454,6 +455,7 @@ class MapmriFit(ReconstFit):
             that after positivity constraint failed, also matrix inversion
             failed.
         """
+
         self.model = model
         self._mapmri_coef = mapmri_coef
         self.gtab = model.gtab
@@ -900,11 +902,35 @@ class MapmriFit(ReconstFit):
         Recovers the fitted signal for the given gradient table. If no gradient
         table is given it recovers the signal for the gtab of the data.
         """
+        print 'en foitted signal'
         if gtab is None:
-            E = self.predict(self.model.gtab, S0=1.)
+            E= self.predict(self.model.gtab, S0=1.)
         else:
             E = self.predict(gtab, S0=1.)
+
         return E
+
+    def getM(self, qvals_or_gtab, S0=100.):
+        r'''Recovers the reconstructed signal for any qvalue array or
+            gradient table.
+            '''
+        if isinstance(qvals_or_gtab, np.ndarray):
+            q = qvals_or_gtab
+            qvals = np.linalg.norm(q, axis=1)
+        else:
+            gtab = qvals_or_gtab
+            qvals = np.sqrt(gtab.bvals / self.model.tau) / (2 * np.pi)
+            q = qvals[:, None] * gtab.bvecs
+
+        if self.model.anisotropic_scaling:
+            q_rot = np.dot(q, self.R)
+            print 'ROTO LOS Q', q.shape
+            M = mapmri_phi_matrix(self.radial_order, self.mu, q_rot)
+        else:
+            # print 'por calcular M'
+            M = mapmri_isotropic_phi_matrix(self.radial_order, self.mu[0], q)
+
+        return  M
 
     def predict(self, qvals_or_gtab, S0=100.):
         r'''Recovers the reconstructed signal for any qvalue array or
@@ -921,9 +947,13 @@ class MapmriFit(ReconstFit):
         if self.model.anisotropic_scaling:
             q_rot = np.dot(q, self.R)
             M = mapmri_phi_matrix(self.radial_order, self.mu, q_rot)
+            print '(rot) M.shape', np.linalg.norm(M)
         else:
-            #print 'por calcular M'
+            print 'por calcular mu.shape', self.mu
+
             M = mapmri_isotropic_phi_matrix(self.radial_order, self.mu[0], q)
+            print '(no rot) M.shape', np.linalg.norm(M), q.shape
+
 
         E = S0 * np.dot(M, self._mapmri_coef)
         return E

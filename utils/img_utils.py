@@ -243,7 +243,7 @@ def _isc(vol1, vol2, y=-1, yp=-1, b=0, inter='none', cmap='gray',titles=None, vm
         plt.subplot(1, 2, 2).set_title(titles[1])
     return plt
 
-def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray', titles=None,vmin=0, vmax=500):
+def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray', titles=None,vmin=None, vmax=None):
     # plt.figure('Showing the datasets')
     """
     plt.subplot(1, 3, 1).set_axis_off()
@@ -253,9 +253,12 @@ def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray', titles=None,vmi
     plt.subplot(1, 3, 3).set_axis_off()
     plt.imshow(np.rot90(vol3[:, vol3.shape[1] // y, :, b]), interpolation=inter, cmap=cmap)
     """
-    im1 =__plotOne(1, 3, 1, vol1,y,b,inter,cmap,vmin=vmin, vmax=vmax)
-    im2 =__plotOne(1, 3, 2, vol2,y,b,inter,cmap,vmin=vmin, vmax=vmax)
-    im3= __plotOne(1, 3, 3, vol3,y,b,inter,'Blues',vmin=-2, vmax=1)
+    vmin1, vmin2, vmin3 = get_proper_value(vmin, 3)
+    vmax1, vmax2, vmax3 =  get_proper_value(vmax, 3)
+
+    im1 =__plotOne(1, 3, 1, vol1,y,b,inter,cmap,vmin=vmin1, vmax=vmax1)
+    im2 =__plotOne(1, 3, 2, vol2,y,b,inter,cmap,vmin=vmin2, vmax=vmax2)
+    im3= __plotOne(1, 3, 3, vol3,y,b,inter,'Blues',vmin=vmin3, vmax=vmax3)
 
     if titles is not None :
         plt.subplot(1, 3, 1).set_title(titles[0])
@@ -265,6 +268,18 @@ def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray', titles=None,vmi
     #plt.colorbar()
     return plt, im1,im2,im3
 
+def get_proper_value(vlimit, amount_needed):
+    if isinstance(vlimit, list):
+        res = list((1,) * amount_needed)
+        k = len(vlimit)-1
+        for i in range(amount_needed-1, -1, -1):
+            res[i] = vlimit[k]
+            if k > 0 :
+                k=k-1
+        res = tuple(res)
+    else:
+        res = (vlimit, )*amount_needed
+    return res
 
 def __plotOne(sp1,sp2,sp3, vol, y , b, inter, cmap,vmin=0, vmax=500):
     if len(vol.shape) > 3:
