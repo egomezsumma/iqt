@@ -62,11 +62,12 @@ def load_dmri(n_samples, n , m):
 
 def train(X, Y, verbose=False):
     # Split the data into training/testing sets
-    dmri_X_train = X.T[:-1]
+    n_samples = X.shape[1]
+    dmri_X_train = X.T[:-1] if n_samples > 1 else X.T
     dmri_X_test = X.T[-1:]
 
     # Split the targets into training/testing sets
-    dmri_y_train = Y.T[:-1]
+    dmri_y_train = Y.T[:-1] if n_samples > 1 else Y.T
     dmri_y_test = Y.T[-1:]
 
     # Create linear regression object
@@ -83,3 +84,11 @@ def train(X, Y, verbose=False):
     except RuntimeError as e:
         print e;
     return regr, dmri_X_train , dmri_y_train, dmri_X_test, dmri_y_test
+
+
+def train_grouping_by_b(dicX, dicY, verbose=False):
+    regr, dmri_X_train, dmri_y_train, dmri_X_test, dmri_y_test = {}, {}, {}, {}, {}
+    for b in dicX.keys():
+        X, Y = dicX[b], dicY[b]
+        regr[b], dmri_X_train[b], dmri_y_train[b], dmri_X_test[b], dmri_y_test[b] = train(X, Y, verbose=verbose)
+    return regr, dmri_X_train, dmri_y_train, dmri_X_test, dmri_y_test
