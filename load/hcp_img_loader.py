@@ -27,6 +27,7 @@ def load_subject_small(index, numbers, bval=None, bvalpos=None):
     bvals = np.loadtxt(folder + 'bvals_' + subject)
     bvecs = np.loadtxt(folder + 'bvecs_' + subject)
 
+    print '#'+subject+':', bvals[:6]
     if bvalpos is not None:
         img = nib.load(folder + 'data_small_12x12x12x6_' + subject + '_b' + str(bval) + '.nii.gz')
         bsize = min(len(bvalpos), img.shape[3])
