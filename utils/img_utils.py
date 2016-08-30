@@ -126,6 +126,8 @@ def _is(volumen, y=-1, b=0, inter='none', cmap='gray', title=None,vmin=None, vma
 
 
 
+
+
 def _is(volumen, y=2, b=0, inter='none', cmap='gray', title=None,vmin=0, vmax=500):
     if len(volumen.shape) > 3 :
         plt.imshow(np.rot90(volumen[:, volumen.shape[1] // y, :, b]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
@@ -137,6 +139,32 @@ def _is(volumen, y=2, b=0, inter='none', cmap='gray', title=None,vmin=0, vmax=50
     #plt.colorbar()
     #print volumen.shape, 'y=', volumen.shape[1]//y
     return plt
+
+
+def _ish(volumen, y=-1, b=0, inter='none', cmap='gray', title=None, vmin=0, vmax=500):
+    if y < 0 :
+        y = volumen.shape[1] // 2
+
+    plt.subplot(2, 2, 1).set_axis_off()
+    if len(volumen.shape) > 3 :
+        plt.imshow(np.rot90(volumen[:,  y, :, b]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
+    else:
+        plt.imshow(np.rot90(volumen[:, y]), interpolation=inter, cmap=cmap, vmin=vmin, vmax=vmax)
+    #plt.axis('off')
+
+    plt.subplot(2, 1, 2).set_axis_off()
+    plt.hist(volumen[:,y, :, b].flatten())
+    plt.axis('on')
+
+    u, std = volumen[:,y, :, b].mean(), np.std(volumen[:,y, :, b])
+    if title is not None:
+        plt.subplot(2, 2, 1).title(title)
+    plt.subplot(2, 1, 2).set_title('Histogram y='+str(y)+' b='+str(b) +' u='+str(int(u))+'+/-'+str(int(std)))
+
+    #plt.colorbar()
+    #print volumen.shape, 'y=', volumen.shape[1]//y
+    return plt
+
 
 
 def _iswr(volumen, rect, y=2, b=0, inter='none', cmap='gray', title=None,linewidth=2, edgecolor='r',vmin=0, vmax=500):

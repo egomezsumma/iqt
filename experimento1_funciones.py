@@ -86,10 +86,10 @@ def train(X, Y, verbose=False):
     return regr, dmri_X_train , dmri_y_train, dmri_X_test, dmri_y_test
 
 
-def train_grouping_by_b(dicX, dicY, verbose=False):
+def train_grouping_by(dicX, dicY, verbose=False):
     regr, dmri_X_train, dmri_y_train, dmri_X_test, dmri_y_test = {}, {}, {}, {}, {}
     for b in dicX.keys():
         X, Y = dicX[b], dicY[b]
-        print 'Training with bval=',b,'X.shape ', X.shape, '  Y.shape', Y.shape
+        #print 'Training with bval=',b,'X.shape ', X.shape, '  Y.shape', Y.shape
         regr[b], dmri_X_train[b], dmri_y_train[b], dmri_X_test[b], dmri_y_test[b] = train(X, Y, verbose=verbose)
     return regr, dmri_X_train, dmri_y_train, dmri_X_test, dmri_y_test
