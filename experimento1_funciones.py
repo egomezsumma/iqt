@@ -60,7 +60,7 @@ def load_dmri(n_samples, n , m):
         print e;
 
 
-def train(X, Y, verbose=False):
+def train(X, Y, verbose=False, intercept=False):
     # Split the data into training/testing sets
     n_samples = X.shape[1]
     dmri_X_train = X.T[:-1] if n_samples > 1 else X.T
@@ -71,7 +71,7 @@ def train(X, Y, verbose=False):
     dmri_y_test = Y.T[-1:]
 
     # Create linear regression object
-    regr = linear_model.LinearRegression(fit_intercept=False)
+    regr = linear_model.LinearRegression(fit_intercept=intercept)
     #regr = linear_model.Ridge(alpha = .5)
 
 
@@ -83,13 +83,27 @@ def train(X, Y, verbose=False):
         regr.fit(dmri_X_train, dmri_y_train)
     except RuntimeError as e:
         print e;
-    return regr, dmri_X_train , dmri_y_train, dmri_X_test, dmri_y_test
+
+    if intercept:
+        return regr, dmri_X_train, dmri_y_train, dmri_X_test, dmri_y_test, regr.intercept_
+    else:
+        return regr, dmri_X_train , dmri_y_train, dmri_X_test, dmri_y_test
 
 
-def train_grouping_by(dicX, dicY, verbose=False):
-    regr, dmri_X_train, dmri_y_train, dmri_X_test, dmri_y_test = {}, {}, {}, {}, {}
+def train_grouping_by(dicX, dicY, verbose=False, intercept=False):
+    regr, dmri_X_train, dmri_y_train, dmri_X_test, dmri_y_test , intercept_data = {}, {}, {}, {}, {}, {}
+
     for b in dicX.keys():
         X, Y = dicX[b], dicY[b]
         #print 'Training with bval=',b,'X.shape ', X.shape, '  Y.shape', Y.shape
-        regr[b], dmri_X_train[b], dmri_y_train[b], dmri_X_test[b], dmri_y_test[b] = train(X, Y, verbose=verbose)
-    return regr, dmri_X_train, dmri_y_train, dmri_X_test, dmri_y_test
+        if intercept :
+            regr[b], dmri_X_train[b], dmri_y_train[b], dmri_X_test[b], dmri_y_test[b], intercept_data[b] =\
+                train(X, Y, verbose=verbose, intercept=intercept)
+        else:
+            regr[b], dmri_X_train[b], dmri_y_train[b], dmri_X_test[b], dmri_y_test[b] = \
+                train(X, Y, verbose=verbose, intercept=intercept)
+
+    if intercept:
+        return regr, dmri_X_train, dmri_y_train, dmri_X_test, dmri_y_test, intercept_data
+    else:
+        return regr, dmri_X_train, dmri_y_train, dmri_X_test, dmri_y_test
