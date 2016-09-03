@@ -4,9 +4,11 @@ import nibabel as nib
 from dipy.core.gradients import gradient_table
 
 
-def load_subject_medium(index, numbers, bval=None, bvalpos=None):
+def load_subject_medium(index, numbers, bval=None, bvalpos=None, base_folder='.'):
     subject = str(numbers[index])
-    folder = './HCP/' + subject + '/'
+
+    folder = base_folder + '/HCP/' + subject + '/'
+
     bvals = np.loadtxt(folder + 'bvals_' + subject)
     bvecs = np.loadtxt(folder + 'bvecs_' + subject)
 
@@ -21,9 +23,9 @@ def load_subject_medium(index, numbers, bval=None, bvalpos=None):
     return img, gtab
 
 
-def load_subject_small(index, numbers, bval=None, bvalpos=None):
+def load_subject_small(index, numbers, bval=None, bvalpos=None,base_folder='.'):
     subject = str(numbers[index])
-    folder = './HCP/' + subject + '/'
+    folder = base_folder +'/HCP/' + subject + '/'
     bvals = np.loadtxt(folder + 'bvals_' + subject)
     bvecs = np.loadtxt(folder + 'bvecs_' + subject)
 
@@ -39,9 +41,9 @@ def load_subject_small(index, numbers, bval=None, bvalpos=None):
     return img, gtab
 
 
-def load_subject_small_noS0(index, numbers, bval=None, bvalpos=None):
+def load_subject_small_noS0(index, numbers, bval=None, bvalpos=None, base_folder='.'):
     subject = str(numbers[index])
-    folder = './HCP/' + subject + '/'
+    folder = base_folder +'/HCP/' + subject + '/'
     bvals = np.loadtxt(folder + 'bvals_' + subject)
     bvecs = np.loadtxt(folder + 'bvecs_' + subject)
 
@@ -66,9 +68,9 @@ def __index_not_equals_to(arr, values):
     return [ i for i in xrange(len(arr)) if arr[i] not in values]
 
 
-def load_subject_medium_noS0(index, numbers, bval=None, bvalpos=None):
+def load_subject_medium_noS0(index, numbers, bval=None, bvalpos=None, base_folder='.'):
     subject = str(numbers[index])
-    folder = './HCP/' + subject + '/'
+    folder = base_folder +'/HCP/' + subject + '/'
     bvals = np.loadtxt(folder + 'bvals_' + subject)
     bvecs = np.loadtxt(folder + 'bvecs_' + subject)
 

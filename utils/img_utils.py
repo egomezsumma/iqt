@@ -138,7 +138,25 @@ def _is(volumen, y=2, b=0, inter='none', cmap='gray', title=None,vmin=0, vmax=50
         plt.title(title)
     #plt.colorbar()
     #print volumen.shape, 'y=', volumen.shape[1]//y
+
     return plt
+
+def _ig(volumen,fname, y=2, b=0, inter='none', cmap='gray',title=None,vmin=None, vmax=None):
+    if title is not None:
+        plt.title(title)
+
+    if len(volumen.shape) > 3 :
+        plt.imsave(fname, np.rot90(volumen[:, volumen.shape[1] // y, :, b]), cmap=cmap, vmin=vmin, vmax=vmax)
+    else:
+        plt.imsave(fname,np.rot90(volumen[:, volumen.shape[1] // y]), cmap=cmap, vmin=vmin, vmax=vmax)
+    plt.axis('off')
+
+    #plt.colorbar()
+    #print volumen.shape, 'y=', volumen.shape[1]//y
+
+    return plt
+
+
 
 
 def _ish(volumen, y=-1, b=0, inter='none', cmap='gray', title=None, vmin=0, vmax=500):
