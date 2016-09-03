@@ -1,11 +1,14 @@
-#!/user/lgomez/home/anaconda2/bin/python
+#!/home/lgomez/anaconda2/bin/python
+#OAR -l {mem>=200000}/nodes=2/core=12,walltime=1
+
 
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 import cvxpy as cvx
 import load.hcp_img_loader as hcp
-from utils.persistance.persistence_array import parray
+#from utils.persistance.persistence_array import parray
+from utils.persistence_array import parray
 from scipy.sparse import csr_matrix
 import experimento1_funciones as e1f
 import load.samples as samples
@@ -218,7 +221,7 @@ def indexs(a, val):
 def params_for(the_one_out, sample_maker, n_samples, loader_func, scale=2):
     ## The one that left out to validate
     
-    i_hr, i_lr, gtab = samples.get_sample_of_dwi(the_one_out, subjects, loader_func, scale=scale)
+    i_hr, i_lr, gtab = samples.get_sample_of_dwi(the_one_out, subjects, loader_func, bsize=BSIZE, scale=scale)
     #C_hr, _, _ = samples.get_sample_of_mapl(the_one_out, subjects, loader_func, scale=scale)
     
     ### Aca shiftear el arreglo de sujetos (train deja el ultimo afuera del entrenamiento)
@@ -241,8 +244,10 @@ def params_for(the_one_out, sample_maker, n_samples, loader_func, scale=2):
 
 
 # ## Solving the problem and cross-validation (leave one out)
-RES_BASE_FOLDER = './resultados/exp6/'
+RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp6/'
 VMIN, VMAX=0, 1
+BSIZE=55
+
 
 voi_hr_shape = (12, 12, 12, 6)
 voi_lr_shape = (6, 6, 6, 6)
@@ -254,7 +259,7 @@ bvals2000pos = [18, 27, 69, 75, 101, 107]
 
 ## Con imagenes pequenas multi-shel
 loader_func = hcp.load_subject_medium_noS0
-sample_maker = samples.get_sample_maker_of_map(subjects, loader_func, scale=2)
+sample_maker = samples.get_sample_maker_of_map(subjects, loader_func, bsize=BSIZE, scale=2)
 
 n_samples = 3
 iterations = 3
@@ -293,7 +298,7 @@ for i in range(0, iterations):
 
     print
     print
-    print
+    print 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
     print '= Solving optimization problem (subject:%s, param:%s) === ' % (subject, param_name)
 
     A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, res =\
@@ -306,7 +311,7 @@ for i in range(0, iterations):
                           gtab, 
                           intercept=intercept, 
                           scale=2, 
-                          max_iters=10, 
+                          max_iters=5, 
                           verbose=False)
 
     index = np.argmin(np.array(res['mse']))
@@ -327,8 +332,8 @@ print ' === TOTAL TIME :',  str(int(total_sec//60))+"'", str(int(total_sec%60))+
 #    np.save(base_folder+ 'mins_alphas', mins_lamda)
 
 print 'mean=', mins_lamda.mean(), mins_lamda
-plt.bar(xrange(mins_lamda.size), mins_lamda)
-plt.savefig(base_folder + '/mins_' + param_name + '.pdf')
+#plt.bar(xrange(mins_lamda.size), mins_lamda)
+#plt.savefig(base_folder + '/mins_' + param_name + '.pdf')
 
 # In[11]:
 print 'rangos:', rango
