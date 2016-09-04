@@ -7,12 +7,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cvxpy as cvx
 import load.hcp_img_loader as hcp
-#from utils.persistance.persistence_array import parray
-from utils.persistence_array import parray
+
 from scipy.sparse import csr_matrix
 import experimento1_funciones as e1f
 import load.samples as samples
 import sys
+
+
+IS_NEF = '/home/lgomez/' in sys.prefix
+
+if IS_NEF:
+    from utils.persistence_array import parray
+else:
+    from utils.persistance.persistence_array import parray
 
 
 def mm(A, cast_int=True):
@@ -71,7 +78,8 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
         if intercept is not None:
             cvxInt_c = cvx.Constant(intercept[c])
             #cvxInt_c:(vlr, 1)
-            fid_b = cvx.sum_squares((Gc*Chr_c+cvxInt_c) - Clr_c.T)
+            fid_b = cvx.sum_squares((Gc * Chr_c + cvxInt_c) - Clr_c)
+            #fid_b = cvx.sum_squares((Gc*Chr_c+cvxInt_c) - Clr_c.T)
         else:
             fid_b = cvx.sum_squares(Gc*Chr_c - Clr_c.T)
         
@@ -151,7 +159,7 @@ def solveMin_fitCosnt(name_parameter, the_range, c_lr, i_hr, G, M, U, tau, gtab,
     
     base_folder = RES_BASE_FOLDER + name_parameter + '/'
     measures = ['mse', 'mse1000', 'mse2000', 'mse3000']
-    info = dict((key, parray( base_folder + key + '_'+subject+'.txt')) for key in measures)
+    info = dict((key, parray( base_folder + key + '_'+str(subject)+'.txt')) for key in measures)
     
     #info = {'mse':parray(RES_BASE_FOLDER+'mse_'+the), 'mse1000':[],'mse2000':[],'mse3000':[]}
     for val in the_range :
@@ -194,10 +202,12 @@ def solveMin_fitCosnt(name_parameter, the_range, c_lr, i_hr, G, M, U, tau, gtab,
 
         mse = ((A-i_hr)**2).mean()
         info['mse'].append(mse)
-        
+        print A.shape, i_hr.shape, 'mse=', mse
+
         mse = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
         info['mse1000'].append(mse)
-        
+        print A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', mse
+
         mse = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
         info['mse2000'].append(mse)
         
@@ -217,29 +227,23 @@ def indexs(a, val):
     return [ i for i in xrange(a.size) if a[i] == val]
 
 
+
+
 # In[8]:
-def params_for(the_one_out, sample_maker, n_samples, loader_func, scale=2):
+def params_for(subjects, sample_maker, n_samples, loader_func, scale=2):
     ## The one that left out to validate
     
-    i_hr, i_lr, gtab = samples.get_sample_of_dwi(the_one_out, subjects, loader_func, bsize=BSIZE, scale=scale)
-    #C_hr, _, _ = samples.get_sample_of_mapl(the_one_out, subjects, loader_func, scale=scale)
-    
+
     ### Aca shiftear el arreglo de sujetos (train deja el ultimo afuera del entrenamiento)
-    lr_samples, hr_samples = samples.buildT_grouping_by(sample_maker, n_samples) #lr, hr
+    lr_samples, hr_samples = samples.buildT_grouping_by(subjects, sample_maker, n_samples) #lr, hr
 
     # Build downsampling matrix
     print '= Training and fiting n_samples: %d ...' % (n_samples)
-    regr, chr_train , clr_train, chr_test, clr_test, intercept =                 e1f.train_grouping_by(hr_samples, lr_samples, intercept=True)
-    del(chr_train)
-    del(clr_train)
-    del(chr_test)
+    regr, _ , _, intercept = e1f.train_grouping_by(hr_samples, lr_samples, intercept=True)
 
     G = dict((c,csr_matrix(regr[c].coef_)) for c in regr.keys())
-    
-    # Mapl params
-    M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order = 4)
 
-    return i_hr, i_lr, gtab, G,intercept, M, tau, mu, U , clr_test
+    return G,intercept
     
 
 
@@ -252,25 +256,32 @@ BSIZE=55
 voi_hr_shape = (12, 12, 12, 6)
 voi_lr_shape = (6, 6, 6, 6)
 
-subjects = [100307, 100408, 180129, 180432, 180836, 180937]
-#subjects = [100307, 100408, 180129, 180432]
+
+if IS_NEF :
+    subjects = np.loadtxt('/home/lgomez/demo/50sujetos.txt')
+else:
+    subjects = [100307, 100408, 180129, 180432, 180836, 180937]
+    #subjects = [100307, 100408, 180129, 180432]
 
 bvals2000pos = [18, 27, 69, 75, 101, 107]
 
 ## Con imagenes pequenas multi-shel
+SCALE=2
 loader_func = hcp.load_subject_medium_noS0
-sample_maker = samples.get_sample_maker_of_map(subjects, loader_func, bsize=BSIZE, scale=2)
+sample_maker = samples.get_sample_maker_of_map(loader_func, bsize=BSIZE, scale=SCALE)
 
-n_samples = 3
-iterations = 3
+n_samples = 6
+#iterations = 3
+
 
 
 param_name = sys.argv[1]
+#param_name = 'lamda'
 params_range = {
-    'lamda': np.arange(0.001, 0.4, 0.1),
-    'alpha': np.arange(0.001, 0.4, 0.1),
-    'beta': np.arange(0.001, 0.4, 0.1),
-    'gamma': np.arange(0.001, 0.4, 0.1)
+    'lamda': np.arange(0.2, 2.0, 0.2),#9
+    'alpha': np.arange(1.627e-15, 2.0, 0.2),#10
+    'beta': np.arange(1.452e-15, 1.452e-14, 1.452e-15),#10
+    'gamma': np.arange(0.05, 0.9, 0.09) #10
 }
 
 name_parameter = param_name
@@ -285,43 +296,62 @@ mins_lamda   = parray(base_folder + '/mins_mses.txt')
 times        = parray(base_folder +'/times.txt')
 optimal_vals = parray(base_folder +'/optimal_vals.txt')
 
+FITS =11
+GROUP_SIZE=5
+GROUPS = n_samples/GROUP_SIZE
+RANGO= len(rango)
 
+mse = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
+for group_num in xrange(GROUPS):
+    train_subjects = subjects[:GROUP_SIZE]
+    test_set = subjects[GROUP_SIZE:GROUP_SIZE+FITS]
+    subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
 
-for i in range(0, iterations):
-    subjects.append(subjects.pop(0))
-    subject = str(subjects[len(subjects)-1])
-    print '== Leaving out: #', subject
-    the_one_out = len(subjects)-1
-    
-    i_hr, i_lr, gtab, G, intercept, M, tau, mu, U , clr_test =\
-        params_for(the_one_out, sample_maker, n_samples, loader_func, scale=2)
+    # Linear regresion of this group
+    G, intercept = params_for(train_subjects, sample_maker, n_samples, loader_func, scale=2)
 
-    print
-    print
-    print 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
-    print '= Solving optimization problem (subject:%s, param:%s) === ' % (subject, param_name)
+    for subject_index in xrange(len(test_set)):
+        subject = test_set[subject_index]
+        print '== Group:%d Fiting subject:%d #' % (group_num, subject)
 
-    A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, res =\
-        solveMin_fitCosnt(name_parameter,
-                          rango,  
-                          clr_test, 
-                          i_hr, 
-                          G, 
-                          M, U, tau, 
-                          gtab, 
-                          intercept=intercept, 
-                          scale=2, 
-                          max_iters=5, 
-                          verbose=False)
+        # Get input for the subject to fit
+        i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, loader_func, bsize=BSIZE, scale=SCALE)
+        _, c_lr, _ = samples.get_sample_of_mapl(subject, loader_func, scale=SCALE)
+        c_lr = samples.split_by(c_lr)
+        # Mapl params
+        M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
 
-    index = np.argmin(np.array(res['mse']))
-    min_lamda = rango[index]
-    mins_lamda.append(min_lamda)
+        print
+        print
+        print 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
+        print '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name)
 
-    times.append(seg)
-    optimal_vals.append(prob.value)
+        A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, res =\
+            solveMin_fitCosnt(name_parameter,
+                              rango,
+                              c_lr,
+                              i_hr,
+                              G,
+                              M, U, tau,
+                              gtab,
+                              intercept=intercept,
+                              scale=2,
+                              max_iters=5,
+                              verbose=False)
+
+        # Saving all results for analize latter
+        mse[:, subject_index, group_num] = res['mse']
+
+        # Keeping the parameter value of each fitting that produce the min-mse (of all the val tested for the subjetc)
+        index = np.argmin(np.array(res['mse']))
+        min_lamda = rango[index]
+        mins_lamda.append(min_lamda)
+
+        times.append(seg)
+        optimal_vals.append(prob.value)
 
 mins_lamda = mins_lamda.asnumpy()
+
 
 # Log spended
 total_sec = np.array(times).sum()
@@ -331,7 +361,12 @@ print ' === TOTAL TIME :',  str(int(total_sec//60))+"'", str(int(total_sec%60))+
 #if base_folder is not None: 
 #    np.save(base_folder+ 'mins_alphas', mins_lamda)
 
-print 'mean=', mins_lamda.mean(), mins_lamda
+r, f, g = mse.shape
+name = '/mse_%d_%d_%d' % mse.shape
+np.save(base_folder + name, mse)
+
+print 'Subjects fitted = ', mins_lamda.shape
+print 'mean=', mins_lamda.mean(),  mins_lamda
 #plt.bar(xrange(mins_lamda.size), mins_lamda)
 #plt.savefig(base_folder + '/mins_' + param_name + '.pdf')
 

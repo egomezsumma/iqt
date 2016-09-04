@@ -6,7 +6,7 @@ import mymapl.minmapl as mapl
 
 
 
-def get_sample_dwi(index, numbers, loader_func, bval=None, bvalpos=None, scale=2):
+def get_sample_dwi(subject_number, loader_func, bval=None, bvalpos=None,bsize=-1, scale=2):
     """
     Get the sample for the subjets numbers[index] and retur
     :param index: index on numbers of subject needed
@@ -18,7 +18,7 @@ def get_sample_dwi(index, numbers, loader_func, bval=None, bvalpos=None, scale=2
     :return: Hr, Lr, S0Hr, S0Lr, gtab
     """
     # Load Hcp subject
-    img, gtab, idxs = loader_func(index, numbers, bval, bvalpos)
+    img, gtab, idxs = loader_func(subject_number, bval, bvalpos,bsize=bsize)
     # Downsample data
     lr, _ = img_utils.downsampling(img, scale)
     data = img.get_data()
@@ -27,16 +27,16 @@ def get_sample_dwi(index, numbers, loader_func, bval=None, bvalpos=None, scale=2
     return data_noS0, lr[:, :, :, idxs], data[:, :, :, s0_idxs], lr[:, :, :, s0_idxs], gtab
 
 
-def get_sample_of_dwi(index, numbers, loader_func, bval=None, bvalpos=None, scale=2):
-    hr, lr, S0hr, S0lr, gtab = get_sample_dwi(index, numbers, loader_func, bval=None, bvalpos=None, scale=2)
+def get_sample_of_dwi(subject_number, loader_func, bval=None, bvalpos=None, bsize=-1, scale=2):
+    hr, lr, S0hr, S0lr, gtab = get_sample_dwi(subject_number, loader_func, bval=None, bvalpos=None, bsize=bsize, scale=scale)
     hr = get_atenuation(hr, S0hr)
     lr = get_atenuation(lr, S0lr)
     del (S0hr, S0lr)
     return hr, lr, gtab
 
 
-def get_sample_of_mapl(index, numbers, loader_func, bval=None, bvalpos=None, scale=2, multiply_S0=False):
-    hr, lr, S0hr, S0lr, gtab = get_sample_dwi(index, numbers, loader_func, bval=None, bvalpos=None, scale=2)
+def get_sample_of_mapl(subject_number, loader_func, bval=None, bvalpos=None, bsize=-1, scale=2, multiply_S0=False):
+    hr, lr, S0hr, S0lr, gtab = get_sample_dwi(subject_number, loader_func, bval=bval, bvalpos=bvalpos, bsize=bsize, scale=scale)
     # Calculate MAPL  C_hr:(Nx,Ny,Nz,Nc) c_lr:(nx,ny,nz,nc)
     C_hr = mapl.getC(hr, gtab, radial_order=4)
     c_lr = mapl.getC(lr, gtab, radial_order=4)
@@ -54,12 +54,12 @@ def get_sample_of_mapl(index, numbers, loader_func, bval=None, bvalpos=None, sca
     return C_hr, c_lr, gtab
 
 
-def get_sample_maker_of_map(numbers, loader_func, bval=None, bvalpos=None, scale=2):
-    return lambda index: get_sample_of_mapl(index, numbers, loader_func, bval, bvalpos, scale)
+def get_sample_maker_of_map(loader_func, bval=None, bvalpos=None, bsize=-1, scale=2):
+    return lambda subject_num: get_sample_of_mapl(subject_num, loader_func, bval, bvalpos, bsize, scale)
 
 
-def get_sample_maker_of_dwi(numbers, loader_func, bval=None, bvalpos=None, scale=2):
-    return lambda index: get_sample_of_dwi(index, numbers, loader_func, bval, bvalpos, scale)
+def get_sample_maker_of_dwi(loader_func, bval=None, bvalpos=None, scale=2):
+    return lambda subject_num: get_sample_of_dwi(subject_num, loader_func, bval, bvalpos,bsize, scale)
 
 
 def buildT(sample_getter, n_samples):
@@ -73,20 +73,21 @@ def buildT(sample_getter, n_samples):
     return X, Y
 
 
-def buildT_grouping_by(sample_getter, n_samples, values_needed=None):
+def buildT_grouping_by(subjects, sample_getter, n_samples, values_needed=None):
     """
     Genera tantos conjuntos de entrenamiento como
     bvals distintos tenga el volumne
     """
-    hr, lr, gtab = sample_getter(0)
+    hr, lr, gtab = sample_getter(subjects[0])
     bs=None
     if values_needed is not None:
         bs = values_needed[0:hr.shape[3]]
 
     dicX = split_by(lr, gtab, vals_needed=bs)
     dicY = split_by(hr, gtab, vals_needed=bs)
-    for i in range(1, n_samples):
-        hr, lr, gtab = sample_getter(i)
+    for i in range(1, len(subjects)):
+        subject = subjects[i]
+        hr, lr, gtab = sample_getter(subject)
         dicX = split_by(lr, gtab, dicX, vals_needed=bs)
         dicY = split_by(hr, gtab, dicY, vals_needed=bs)
     return dicX, dicY
@@ -104,7 +105,7 @@ def buildT_grouping_by_c(sample_getter, n_samples):
         dicY = split_by_coef(C, dicY)
     return dicX, dicY
 """
-def split_by(img, gtab, res=None, vals_needed=None):
+def split_by(img, gtab=None, res=None, vals_needed=None):
     if vals_needed is None:
         return split_by_coef(img, res)
     else:
