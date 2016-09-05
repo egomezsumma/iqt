@@ -152,6 +152,7 @@ def get_atenuation(Sq, S0):
     _S0 = S0
     if len(S0.shape) > 3:
         _S0 = S0.mean(axis=3)
+    _S0[_S0==0.0] = 0.0001 # para que no explote la division por cero
     for b in xrange(Sq.shape[3]):
         Sq[:, :, :, b] = np.divide(Sq[:, :, :, b], _S0)
     return Sq

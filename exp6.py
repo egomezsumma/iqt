@@ -258,7 +258,7 @@ voi_lr_shape = (6, 6, 6, 6)
 
 
 if IS_NEF :
-    subjects = np.loadtxt('/home/lgomez/demo/50sujetos.txt')
+    subjects = list(np.loadtxt('/home/lgomez/demo/50sujetos.txt', dtype='int'))
 else:
     subjects = [100307, 100408, 180129, 180432, 180836, 180937]
     #subjects = [100307, 100408, 180129, 180432]
@@ -302,6 +302,10 @@ GROUPS = n_samples/GROUP_SIZE
 RANGO= len(rango)
 
 mse = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
+mse1000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
+mse2000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
+mse3000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
+
 for group_num in xrange(GROUPS):
     train_subjects = subjects[:GROUP_SIZE]
     test_set = subjects[GROUP_SIZE:GROUP_SIZE+FITS]
@@ -341,6 +345,9 @@ for group_num in xrange(GROUPS):
 
         # Saving all results for analize latter
         mse[:, subject_index, group_num] = res['mse']
+        mse1000[:, subject_index, group_num] = res['mse1000']
+        mse2000[:, subject_index, group_num] = res['mse2000']
+        mse3000[:, subject_index, group_num] = res['mse3000']
 
         # Keeping the parameter value of each fitting that produce the min-mse (of all the val tested for the subjetc)
         index = np.argmin(np.array(res['mse']))
@@ -362,8 +369,11 @@ print ' === TOTAL TIME :',  str(int(total_sec//60))+"'", str(int(total_sec%60))+
 #    np.save(base_folder+ 'mins_alphas', mins_lamda)
 
 r, f, g = mse.shape
-name = '/mse_%d_%d_%d' % mse.shape
-np.save(base_folder + name, mse)
+name = '_%d_%d_%d' % mse.shape
+np.save(base_folder + '/mse' + name, mse)
+np.save(base_folder + '/mse1000' +name, mse1000)
+np.save(base_folder + '/mse2000' +name, mse2000)
+np.save(base_folder + '/mse3000' +name, mse3000)
 
 print 'Subjects fitted = ', mins_lamda.shape
 print 'mean=', mins_lamda.mean(),  mins_lamda
