@@ -57,9 +57,8 @@ def get_sample_of_mapl(subject_number, loader_func, bval=None, bvalpos=None, bsi
 def get_sample_maker_of_map(loader_func, bval=None, bvalpos=None, bsize=-1, scale=2):
     return lambda subject_num: get_sample_of_mapl(subject_num, loader_func, bval, bvalpos, bsize, scale)
 
-
-def get_sample_maker_of_dwi(loader_func, bval=None, bvalpos=None, scale=2):
-    return lambda subject_num: get_sample_of_dwi(subject_num, loader_func, bval, bvalpos,bsize, scale)
+def get_sample_maker_of_dwi(loader_func, bval=None, bvalpos=None, bsize=-1, scale=2):
+    return lambda subject_num: get_sample_of_dwi(subject_num, loader_func, bval, bvalpos, bsize=bsize, scale=scale)
 
 
 def buildT(sample_getter, n_samples):
@@ -73,23 +72,21 @@ def buildT(sample_getter, n_samples):
     return X, Y
 
 
-def buildT_grouping_by(subjects, sample_getter, n_samples, values_needed=None):
+def buildT_grouping_by(subjects, sample_getter, use_bvals=False):
     """
     Genera tantos conjuntos de entrenamiento como
     bvals distintos tenga el volumne
     """
     hr, lr, gtab = sample_getter(subjects[0])
-    bs=None
-    if values_needed is not None:
-        bs = values_needed[0:hr.shape[3]]
 
-    dicX = split_by(lr, gtab, vals_needed=bs)
-    dicY = split_by(hr, gtab, vals_needed=bs)
+
+    dicX = split_by(lr, gtab, use_bvals=use_bvals)
+    dicY = split_by(hr, gtab, use_bvals=use_bvals)
     for i in range(1, len(subjects)):
         subject = subjects[i]
         hr, lr, gtab = sample_getter(subject)
-        dicX = split_by(lr, gtab, dicX, vals_needed=bs)
-        dicY = split_by(hr, gtab, dicY, vals_needed=bs)
+        dicX = split_by(lr, gtab, dicX, use_bvals=use_bvals)
+        dicY = split_by(hr, gtab, dicY, use_bvals=use_bvals)
     return dicX, dicY
 
 """
@@ -105,24 +102,30 @@ def buildT_grouping_by_c(sample_getter, n_samples):
         dicY = split_by_coef(C, dicY)
     return dicX, dicY
 """
-def split_by(img, gtab=None, res=None, vals_needed=None):
-    if vals_needed is None:
-        return split_by_coef(img, res)
+def split_by(img, gtab=None, res=None, use_bvals=False):
+    if use_bvals :
+        return split_by_bval(img, gtab, res=res)
     else:
-        return split_by_bval(img, gtab, vals_needed, res)
+        return split_by_coef(img, res)
 
-def split_by_bval(img, gtab, bvals_needed, res=None):
+def split_by_bval(img, gtab, bvals_needed=None, res=None):
     """
     Dada una imagen separa la cuarta dimension segun su vbal
     Y por cada una hace un vector columna
     """
+    bvals_needed = gtab.bvals if bvals_needed is None else bvals_needed
+
     if res is None:
         res = dict((b, None) for b in bvals_needed)
 
     for i in xrange(len(gtab.bvals)):
         b = gtab.bvals[i]
-        if b not in bvals_needed:
+
+        if bvals_needed is not None and b not in bvals_needed:
             continue
+
+        if b not in res.keys():
+            res[b] = None
 
         XorY = res[b]
         if XorY is None:

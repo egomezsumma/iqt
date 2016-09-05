@@ -1,7 +1,6 @@
 #!/home/lgomez/anaconda2/bin/python
 #OAR -l {mem>=200000}/nodes=2/core=12,walltime=1
 
-
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -143,35 +142,178 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
     
     return prob, cvxFidelityExp ,  cvxLaplaceRegExp , cvxNorm1
 
+def find_closest_b(b, list_of_bs):
+    dif = np.abs(b-list_of_bs[0])
+    closest = list_of_bs[0]
+    for elem in list_of_bs :
+        if np.abs(b-elem) < dif :
+            dif = np.abs(b-elem)
+            closest = elem
+    return closest
+
+
+# def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None):
+def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=None):
+    Nb, Nc = M.shape
+    Nx, Ny, Nz, bval = i_hr_shape
+    vlr = Nx * Ny * Nz / (scale ** 3)
+    vlrb = vlr * bval
+    vhr = Nx * Ny * Nz
+    vhrb = vhr * bval
+
+    ## Hr volumes
+    Yhr = cvx.Variable(vhrb, 1, name='cvxYhr')
+    # Yhr.value = np.ones((vhrb, 1))*i_lr.mean()
+
+    ## MAPL params
+    # cvxChr = cvx.Constant(C_hr.reshape(-1, order='F'))
+    cvxChr = cvx.Variable(vhr * Nc, name='cvxChr')
+    # M:(Nb,Nc)
+    cvxMaplE = (M * cvx.reshape(cvxChr, vhr, Nc).T).T
+    # Hr image in row by b-val
+    YhrMapl = cvx.reshape(Yhr, vhr, bval)
+    # Mapl dual expression
+    cvxMaplDualExp = cvx.sum_squares(cvxMaplE - YhrMapl)
+
+    ## Laplacian regularization
+    cvxU = cvx.Constant(U)
+    regLaplade_list = []
+    vhrc = vhr * Nc
+    for voxel in xrange(vhr):
+        cvxLapaceReg = cvx.quad_form(cvxChr[voxel:vhrc:vhr], cvxU)
+        regLaplade_list.append(cvxLapaceReg ** 2)
+    cvxLaplaceRegExp = sum(regLaplade_list)
+
+    ## LA FORMA MATRICIAL NO ME DEJA DICE QUE NO SE PUEDE MULTIPLICAR DOS MATRICES
+    #  cvxChr:(vhrc, 1) U:(Nc,Nc)
+    # cvxC_byCoef = cvx.reshape(cvxChr, vhr, Nc)
+    # cvxCUC = cvx.diag(cvxC_byCoef*cvxU*cvxC_byCoef.T)
+    # cvxLapaceRegExp = cvx.sum_squares(cvxCUC)
+
+
+    ## Fidelity expression
+    # cvxG = G
+    fidelity_list = []
+    lapace_list = []
+    for i in xrange(Nb):
+        b = gtab.bvals[i]
+        b_offset_hr = i * vhr
+        Yhr_b = Yhr[b_offset_hr:b_offset_hr + vhr]
+        # Aprovecho para setearle un valor unicia
+        if b not in G.keys():
+            b_close = find_closest_b(b , G.keys())
+            print "WARNING: bval=", b , ' not in G dict-of-matrix use bval=', b_close, 'instead'
+        else:
+            Gb = cvx.Constant(G[b])
+
+        # Sometimes the data set has E(q) for a same q , we need just one (so we take the average of al samples)
+        if i_lr[b].shape[1] > 1 :
+            #print '> Este set de datos tiene mas de una vez el b=', b, 'repeticiones=', len([z for z in gtab.bvals if z == b ])
+            Ylr_b = cvx.Constant(i_lr[b].mean(axis=1))
+        else:
+            Ylr_b = cvx.Constant(i_lr[b])
+
+        if intercept is not None:
+            cvxInt_b = cvx.Constant(intercept[b])
+            # cvxInt_c:(vlr, 1)
+            fid_b = cvx.sum_squares((Gb * Yhr_b + cvxInt_b) - Ylr_b)
+        else:
+            fid_b = cvx.sum_squares(Gb * Yhr_b - Ylr_b)
+        fidelity_list.append(fid_b)
+    cvxFidelityExp = sum(fidelity_list)
+
+    ## 3D Tv-Norm Regularization
+    #cvx3DTvNomExp = tv3d(Yhr, Nx, Ny, Nz, Nb)
+
+    # Sparcity regularization
+    cvxNorm1 = cvx.norm1(cvxChr)
+
+    ## Mapl weight
+    beta = cvx.Parameter(value=3 * 1.452e-15, name='beta', sign='positive')  # 3.197e-10
+    ## Sparcity weight
+    alpha = cvx.Parameter(value=1.627e-15, name='alpha', sign='positive')  # 4.865e-10
+    ## Fidelity weight
+    lamda = cvx.Parameter(value=1., name='lamda', sign='positive')
+    ## 3D-Tv weight
+    gamma = cvx.Parameter(value=2 * 1.627e-15, name='gamma', sign='positive')
+    ### AS VARIABLES
+    # beta = cvx.Variable(name='beta')
+    # beta.value = 0.2
+    ## Sparcity weight
+    # alpha = cvx.Variable(name='alpha')
+    # alpha.value = 4000
+    ## Fidelity weight
+    # gamma = cvx.Variable(name='gamma')
+    # lamda = cvx.Variable(name='lamda')
+    # lamda.value =0.5
+
+    # Form objective.
+    # obj = cvx.Minimize(cvxFidelityExp + betha*cvxLapaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
+    #obj = cvx.Minimize(
+    #    lamda * cvxFidelityExp + cvxMaplDualExp + beta * cvxLaplaceRegExp + alpha * cvxNorm1 + gamma * cvx3DTvNomExp)
+    obj = cvx.Minimize(
+        lamda * cvxFidelityExp + cvxMaplDualExp + beta * cvxLaplaceRegExp + alpha * cvxNorm1)
+
+    # Constraints
+    # constraints = [lamda > 0 , alpha > 0, beta > 0]
+    constraints = [Yhr >= 0]
+    # Agregar q M*C es positivo o deberia
+
+    # Form and solve problem.
+    prob = cvx.Problem(obj, constraints)
+
+    return prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1
 
 # In[6]:
-def solveMin_fitCosnt(name_parameter, the_range, c_lr, i_hr, G, M, U, tau, gtab, intercept=None, scale=2, max_iters=1500, verbose=False, prob=None):
-    Nx, Ny, Nz, Nb = i_hr.shape
-    Nb, Nc = M.shape
-    nx, ny, nz = Nx/scale, Ny/scale, Nz/scale 
-    vhr, vlr = Nx*Ny*Nz, nx*ny*nz 
-    
-    cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = None, None, None
-        
-    b1000_index = indexs(gtab.bvals, 1000)
-    b2000_index = indexs(gtab.bvals, 2000)
-    b3000_index = indexs(gtab.bvals, 3000)
-    
-    base_folder = RES_BASE_FOLDER + name_parameter + '/'
-    measures = ['mse', 'mse1000', 'mse2000', 'mse3000']
-    info = dict((key, parray( base_folder + key + '_'+str(subject)+'.txt')) for key in measures)
-    
-    #info = {'mse':parray(RES_BASE_FOLDER+'mse_'+the), 'mse1000':[],'mse2000':[],'mse3000':[]}
-    for val in the_range :
-        prob, cvxFidelityExp ,  cvxLaplaceRegExp , cvxNorm1 = define_problem_f1(
-                                    c_lr, 
-                                    vhr, 
+def solveMin_fitCosnt(name_parameter, the_range, subject, loader_func, G, intercept=None, scale=2, max_iters=1500, verbose=False, prob=None):
+
+    definition_fun = None
+    if FORMULA == FORMULA_NO1 :
+        # Get input for the subject to fit
+        i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, loader_func, bsize=BSIZE, scale=SCALE)
+        print 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
+        _, c_lr, _ = samples.get_sample_of_mapl(subject, loader_func, scale=SCALE)
+        c_lr = samples.split_by(c_lr)
+        # Mapl params
+        M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
+
+        definition_fun = lambda : define_problem_f1(
+                                    c_lr,
+                                    vhr,
                                     vlr,
-                                    G, 
+                                    G,
                                     M, U,tau,
                                     gtab,
                                     scale,
                                     intercept=intercept)
+    else:
+        # Get input for the subject to fit
+        i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, loader_func, bsize=BSIZE, scale=SCALE)
+        print 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
+        i_lr = samples.split_by_bval(i_lr, gtab)
+        # Mapl params
+        M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
+
+        definition_fun = lambda : define_problem_f2(i_lr, i_hr.shape, G, M, U, tau, gtab, scale, intercept=intercept)
+
+
+
+    Nx, Ny, Nz, Nb = i_hr.shape
+    Nb, Nc = M.shape
+    nx, ny, nz = Nx / scale, Ny / scale, Nz / scale
+    vhr, vlr = Nx * Ny * Nz, nx * ny * nz
+
+    cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1 = None, None, None
+
+    b1000_index = indexs(gtab.bvals, 1000)
+    b2000_index = indexs(gtab.bvals, 2000)
+    b3000_index = indexs(gtab.bvals, 3000)
+
+    measures = ['mse', 'mse1000', 'mse2000', 'mse3000']
+    info = dict((key, parray(base_folder + key + '_' + str(subject) + '.txt')) for key in measures)
+
+    for val in the_range :
+        prob, cvxFidelityExp ,  cvxLaplaceRegExp , cvxNorm1 = definition_fun()
 
         parameters = dict( (v.name(), v) for v in prob.parameters())
         parameters[name_parameter].value = val
@@ -228,33 +370,30 @@ def indexs(a, val):
 
 
 
-
 # In[8]:
-def params_for(subjects, sample_maker, n_samples, loader_func, scale=2):
+def params_for(subjects, sample_maker, bvals_needed=None):
     ## The one that left out to validate
-    
 
-    ### Aca shiftear el arreglo de sujetos (train deja el ultimo afuera del entrenamiento)
-    lr_samples, hr_samples = samples.buildT_grouping_by(subjects, sample_maker, n_samples) #lr, hr
+    if FORMULA == FORMULA_NO2:
+        lr_samples, hr_samples = samples.buildT_grouping_by(subjects, sample_maker, use_bvals=True) #lr, hr
+    else:
+        lr_samples, hr_samples = samples.buildT_grouping_by(subjects, sample_maker)  # lr, hr
 
     # Build downsampling matrix
-    print '= Training and fiting n_samples: %d ...' % (n_samples)
+    print '= Training and fiting n_samples: %d ...' % len(subjects)
     regr, _ , _, intercept = e1f.train_grouping_by(hr_samples, lr_samples, intercept=True)
 
     G = dict((c,csr_matrix(regr[c].coef_)) for c in regr.keys())
 
     return G,intercept
     
-
+from exp6_constants import *
 
 # ## Solving the problem and cross-validation (leave one out)
-RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp6/'
-VMIN, VMAX=0, 1
-BSIZE=55
 
-
-voi_hr_shape = (12, 12, 12, 6)
-voi_lr_shape = (6, 6, 6, 6)
+#formula_to_use = sys.argv[2]
+formula_to_use = 'f1'
+FORMULA = formulas[formula_to_use]
 
 
 if IS_NEF :
@@ -268,36 +407,29 @@ bvals2000pos = [18, 27, 69, 75, 101, 107]
 ## Con imagenes pequenas multi-shel
 SCALE=2
 loader_func = hcp.load_subject_medium_noS0
-sample_maker = samples.get_sample_maker_of_map(loader_func, bsize=BSIZE, scale=SCALE)
 
-n_samples = 6
-#iterations = 3
+if FORMULA == FORMULA_NO2:
+    sample_maker = samples.get_sample_maker_of_dwi(loader_func, bsize=BSIZE, scale=SCALE)
+else:
+    sample_maker = samples.get_sample_maker_of_map(loader_func, bsize=BSIZE, scale=SCALE)
 
+n_samples = len(subjects)
 
-
-param_name = sys.argv[1]
-#param_name = 'lamda'
-params_range = {
-    'lamda': np.arange(0.2, 2.0, 0.2),#9
-    'alpha': np.arange(1.627e-15, 2.0, 0.2),#10
-    'beta': np.arange(1.452e-15, 1.452e-14, 1.452e-15),#10
-    'gamma': np.arange(0.05, 0.9, 0.09) #10
-}
+#param_name = sys.argv[1]
+param_name = 'lamda'
 
 name_parameter = param_name
 rango = params_range[param_name]
-print 'STARTING JOB FOR', param_name, 'WITH RANGE:', rango
+print 'STARTING JOB FOR', param_name, 'WITH RANGE:', rango, 'USING FORMULA', FORMULA
 
 
-base_folder = RES_BASE_FOLDER + '/' + param_name
+base_folder = RES_BASE_FOLDER + formula_to_use + '/' + param_name + '/'
 
 # Metrics to save
-mins_lamda   = parray(base_folder + '/mins_mses.txt')
-times        = parray(base_folder +'/times.txt')
-optimal_vals = parray(base_folder +'/optimal_vals.txt')
+mins_lamda   = parray(base_folder + 'mins_mses.txt')
+times        = parray(base_folder +'times.txt')
+optimal_vals = parray(base_folder +'optimal_vals.txt')
 
-FITS =11
-GROUP_SIZE=5
 GROUPS = n_samples/GROUP_SIZE
 RANGO= len(rango)
 
@@ -312,32 +444,19 @@ for group_num in xrange(GROUPS):
     subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
 
     # Linear regresion of this group
-    G, intercept = params_for(train_subjects, sample_maker, n_samples, loader_func, scale=2)
+    G, intercept = params_for(train_subjects, sample_maker)
 
     for subject_index in xrange(len(test_set)):
         subject = test_set[subject_index]
         print '== Group:%d Fiting subject:%d #' % (group_num, subject)
-
-        # Get input for the subject to fit
-        i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, loader_func, bsize=BSIZE, scale=SCALE)
-        _, c_lr, _ = samples.get_sample_of_mapl(subject, loader_func, scale=SCALE)
-        c_lr = samples.split_by(c_lr)
-        # Mapl params
-        M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
-
-        print
-        print
-        print 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
         print '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name)
 
         A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, res =\
             solveMin_fitCosnt(name_parameter,
                               rango,
-                              c_lr,
-                              i_hr,
+                              subject,
+                              loader_func,
                               G,
-                              M, U, tau,
-                              gtab,
                               intercept=intercept,
                               scale=2,
                               max_iters=5,
