@@ -1,9 +1,9 @@
 import numpy as np
 import nibabel as nib
-from utils.DataGetter import DataGetter
-from utils.DownsampledImage import DownsampledImage
-from utils.DmriSampleCreators import LrHrDmriRandomSampleCreator
-from utils.ml.MLDataBuilder import SimpleDtiMlDataBuilder
+#from utils.DataGetter import DataGetter
+#from utils.DownsampledImage import DownsampledImage
+#from utils.DmriSampleCreators import LrHrDmriRandomSampleCreator
+#from utils.ml.MLDataBuilder import SimpleDtiMlDataBuilder
 #from scipy.sparse import csr_matrix, csc_matrix
 
 
@@ -75,6 +75,10 @@ def train(X, Y, verbose=False, intercept=False):
     # Train the model using the training sets
     if verbose :
         print 'Training set_training.shape=', dmri_X_train.T.shape, ' ->target.shape=', dmri_y_train.T.shape
+
+    # take off nans
+    dmri_X_train[np.isnan(dmri_X_train)] = 0
+    dmri_y_train[np.isnan(dmri_y_train)] = 0
 
     try:
         regr.fit(dmri_X_train, dmri_y_train)
