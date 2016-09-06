@@ -42,7 +42,7 @@ def get_img(subject, file_name, bsize=-1, size=12):
         # para todos y todas
         data = np.asarray(img.dataobj[x0:xf, y0:yf, z0:zf, 0:bsize])
 
-        print 'Final patch size:',  data.shape
+        #print 'Final patch size:',  data.shape
 
         nifti1img = nib.Nifti1Image(data, img.affine)
         return nifti1img
