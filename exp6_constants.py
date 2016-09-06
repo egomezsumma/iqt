@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 
 RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp6/'
@@ -23,6 +24,17 @@ params_range = {
 voi_hr_shape = (12, 12, 12, 6)
 voi_lr_shape = (6, 6, 6, 6)
 
+
+
+IS_NEF = '/home/lgomez/' in sys.prefix
+
+
+if IS_NEF :
+    subjects = list(np.loadtxt('/home/lgomez/demo/50sujetos.txt', dtype='int'))
+else:
+    subjects = [100307, 100408, 180129, 180432, 180836, 180937]
+    #subjects = [100307, 100408, 180129, 180432]
+
+
 FITS =1#11
 GROUP_SIZE=3#5
-
