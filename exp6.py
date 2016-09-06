@@ -200,11 +200,12 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
         b_offset_hr = i * vhr
         Yhr_b = Yhr[b_offset_hr:b_offset_hr + vhr]
         # Aprovecho para setearle un valor unicia
+        b_close = b
         if b not in G.keys():
             b_close = find_closest_b(b , G.keys())
             print "WARNING: bval=", b , ' not in G dict-of-matrix use bval=', b_close, 'instead'
-        else:
-            Gb = cvx.Constant(G[b])
+
+        Gb = cvx.Constant(G[b_close])
 
         # Sometimes the data set has E(q) for a same q , we need just one (so we take the average of al samples)
         if i_lr[b].shape[1] > 1 :
@@ -214,7 +215,7 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
             Ylr_b = cvx.Constant(i_lr[b])
 
         if intercept is not None:
-            cvxInt_b = cvx.Constant(intercept[b])
+            cvxInt_b = cvx.Constant(intercept[b_close])
             # cvxInt_c:(vlr, 1)
             fid_b = cvx.sum_squares((Gb * Yhr_b + cvxInt_b) - Ylr_b)
         else:
@@ -395,12 +396,13 @@ from exp6_constants import *
 formula_to_use = 'f1'
 FORMULA = formulas[formula_to_use]
 
-
+"""
 if IS_NEF :
     subjects = list(np.loadtxt('/home/lgomez/demo/50sujetos.txt', dtype='int'))
 else:
     subjects = [100307, 100408, 180129, 180432, 180836, 180937]
     #subjects = [100307, 100408, 180129, 180432]
+"""
 
 bvals2000pos = [18, 27, 69, 75, 101, 107]
 
@@ -448,7 +450,7 @@ for group_num in xrange(GROUPS):
 
     for subject_index in xrange(len(test_set)):
         subject = test_set[subject_index]
-        print '== Group:%d Fiting subject:%d #' % (group_num, subject)
+        print '== Group:%d of %d Fiting subject:%d #' % (group_num, GROUPS, subject)
         print '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name)
 
         A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, res =\
