@@ -1,9 +1,5 @@
-#!/home/lgomez/anaconda2/bin/python
-#OAR -l {mem>=200000}/nodes=2/core=12,walltime=1
-
 import time
 import numpy as np
-import matplotlib.pyplot as plt
 import cvxpy as cvx
 import load.hcp_img_loader as hcp
 
@@ -11,6 +7,15 @@ from scipy.sparse import csr_matrix
 import experimento1_funciones as e1f
 import load.samples as samples
 import sys
+import gc
+
+gc.enable()
+
+#def uprint(*msg):
+#    print msg
+#    sys.stdout.flush()
+
+t1, t2, t3, t4 = ' '*4,' '*8, ' '*12, ' '*16
 
 
 IS_NEF = '/home/lgomez/' in sys.prefix
@@ -203,7 +208,8 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
         b_close = b
         if b not in G.keys():
             b_close = find_closest_b(b , G.keys())
-            print "WARNING: bval=", b , ' not in G dict-of-matrix use bval=', b_close, 'instead'
+            print t4, "WARNING: bval=", b , ' not in G dict-of-matrix use bval=', b_close, 'instead'
+            sys.stdout.flush()
 
         Gb = cvx.Constant(G[b_close])
 
@@ -272,7 +278,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject, loader_func, G, interc
     if FORMULA == FORMULA_NO1 :
         # Get input for the subject to fit
         i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, loader_func, bsize=BSIZE, scale=SCALE)
-        print 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
+        print t2, 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
         _, c_lr, _ = samples.get_sample_of_mapl(subject, loader_func, scale=SCALE)
         c_lr = samples.split_by(c_lr)
         # Mapl params
@@ -290,13 +296,13 @@ def solveMin_fitCosnt(name_parameter, the_range, subject, loader_func, G, interc
     else:
         # Get input for the subject to fit
         i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, loader_func, bsize=BSIZE, scale=SCALE)
-        print 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
+        print t2, 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
         i_lr = samples.split_by_bval(i_lr, gtab)
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
 
         definition_fun = lambda : define_problem_f2(i_lr, i_hr.shape, G, M, U, tau, gtab, scale, intercept=intercept)
-
+    sys.stdout.flush()
 
 
     Nx, Ny, Nz, Nb = i_hr.shape
@@ -311,45 +317,47 @@ def solveMin_fitCosnt(name_parameter, the_range, subject, loader_func, G, interc
     b3000_index = indexs(gtab.bvals, 3000)
 
     measures = ['mse', 'mse1000', 'mse2000', 'mse3000']
-    info = dict((key, parray(base_folder + key + '_' + str(subject) + '.txt')) for key in measures)
+    #info = dict((key, parray(base_folder + key + '_' + str(subject) + '.txt')) for key in measures)
+    info = dict((key, []) for key in measures)
 
     for val in the_range :
-        prob, cvxFidelityExp ,  cvxLaplaceRegExp , cvxNorm1 = definition_fun()
+        prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun()
 
         parameters = dict( (v.name(), v) for v in prob.parameters())
         parameters[name_parameter].value = val
-    
+        print t3, 'setting new val ',name_parameter, '=',  parameters[name_parameter].value
+        sys.stdout.flush()
+
         start_time = time.time()
-        res = prob.solve(solver='SCS', max_iters=max_iters, eps=1.0e-05, verbose=verbose )  # Returns the optimal value.
-        #res = prob.solve(solver='ECOS')  # Returns the optimal value.
-
+        prob.solve(solver='SCS', max_iters=max_iters, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
         seg = time.time() - start_time
-
         minutes = int(seg / 60)
-        print
-        print
-        print("--- time of optimization : %d' %d'' (subject:%s, %s: %f) ---" % (minutes , seg%60, subject, name_parameter, val))
-        print "--- status:", prob.status, "optimal value", prob.value
-        print 
+        print t3, "--- time of optimization : %d' %d'' (subject:%s, %s: %f) ---" % (minutes , seg%60, subject, name_parameter, val)
+        print t3, "--- status:", prob.status, "optimal value", prob.value
+        sys.stdout.flush()
 
+        # Get result
         variables = dict( (v.name(), v) for v in prob.variables())
-        #parameters = dict( (v.name(), v) for v in prob.parameters())
-        #print variables
 
         cvxChr = variables['cvxChr']
-
         C = np.asarray(cvxChr.value, dtype='float32').reshape((Nx, Ny, Nz, Nc), order='F')
 
-        A = M.dot(C.reshape((Nx*Ny*Nz, Nc), order='F').T).T
-        A = A.reshape((Nx, Ny, Nz, Nb), order='F')
+        if 'cvxYhr' in variables :
+            cvxYhr = variables['cvxYhr']
+            A = np.asarray(cvxYhr.value, dtype='float32').reshape((Nx, Ny, Nz, Nb), order='F')
+        else:
+            A = M.dot(C.reshape((Nx*Ny*Nz, Nc), order='F').T).T
+            A = A.reshape((Nx, Ny, Nz, Nb), order='F')
 
         mse = ((A-i_hr)**2).mean()
+
         info['mse'].append(mse)
-        print A.shape, i_hr.shape, 'mse=', mse
+        print t3, 'mse=', mse
 
         mse = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
         info['mse1000'].append(mse)
-        print A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', mse
+        print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', mse
+        sys.stdout.flush()
 
         mse = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
         info['mse2000'].append(mse)
@@ -358,11 +366,20 @@ def solveMin_fitCosnt(name_parameter, the_range, subject, loader_func, G, interc
         info['mse3000'].append(mse)
         
         if cvxFidelityExp is not None:
-            print 'cvxFidelityExp', cvxFidelityExp.value
+            print t3, 'cvxFidelityExp', cvxFidelityExp.value
+
         if cvxLaplaceRegExp is not None:
-            print 'cvxLaplaceRegExp', cvxLaplaceRegExp.value
+            print t3, 'cvxLaplaceRegExp', cvxLaplaceRegExp.value
+
         if cvxNorm1 is not None:
-            print 'cvxNorm1', cvxNorm1.value 
+            print t3, 'cvxNorm1', cvxNorm1.value
+
+        gc.collect()
+        print
+        print
+        print
+        sys.stdout.flush()
+        #del(prob, cvxFidelityExp,  cvxLaplaceRegExp , cvxNorm1)
 
     return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
 
@@ -386,14 +403,18 @@ def params_for(subjects, sample_maker, bvals_needed=None):
 
     G = dict((c,csr_matrix(regr[c].coef_)) for c in regr.keys())
 
-    return G,intercept
+    del(lr_samples)
+    del(hr_samples)
+    gc.collect()
+
+    return G, intercept
     
 from exp6_constants import *
 
 # ## Solving the problem and cross-validation (leave one out)
 
 #formula_to_use = sys.argv[2]
-formula_to_use = 'f1'
+formula_to_use = 'f2'
 FORMULA = formulas[formula_to_use]
 
 """
@@ -423,14 +444,18 @@ param_name = 'lamda'
 name_parameter = param_name
 rango = params_range[param_name]
 print 'STARTING JOB FOR', param_name, 'WITH RANGE:', rango, 'USING FORMULA', FORMULA
-
+sys.stdout.flush()
 
 base_folder = RES_BASE_FOLDER + formula_to_use + '/' + param_name + '/'
 
 # Metrics to save
-mins_lamda   = parray(base_folder + 'mins_mses.txt')
-times        = parray(base_folder +'times.txt')
-optimal_vals = parray(base_folder +'optimal_vals.txt')
+#mins_lamda   = parray(base_folder + 'mins_mses.txt')
+#times        = parray(base_folder +'times.txt')
+#optimal_vals = parray(base_folder +'optimal_vals.txt')
+mins_lamda   = []
+times        = []
+optimal_vals = []
+
 
 GROUPS = n_samples/GROUP_SIZE
 RANGO= len(rango)
@@ -446,12 +471,19 @@ for group_num in xrange(GROUPS):
     subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
 
     # Linear regresion of this group
+    print
+    print
+    train_time = time.time()
     G, intercept = params_for(train_subjects, sample_maker)
+    train_time = time.time() - train_time
+    print "== Training of Group:%d  %d'%d''"%(group_num, int(train_time/60), train_time%60)
+    sys.stdout.flush()
 
     for subject_index in xrange(len(test_set)):
         subject = test_set[subject_index]
-        print '== Group:%d of %d Fiting subject:%d #' % (group_num, GROUPS, subject)
-        print '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name)
+        print t1, '== Group:%d of %d Fiting subject:%d of %d (%d)#' % (group_num, GROUPS, subject_index, FITS,  subject)
+        print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name)
+        sys.stdout.flush()
 
         A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, res =\
             solveMin_fitCosnt(name_parameter,
@@ -462,7 +494,7 @@ for group_num in xrange(GROUPS):
                               intercept=intercept,
                               scale=2,
                               max_iters=5,
-                              verbose=False)
+                              verbose=True)
 
         # Saving all results for analize latter
         mse[:, subject_index, group_num] = res['mse']
@@ -475,15 +507,32 @@ for group_num in xrange(GROUPS):
         min_lamda = rango[index]
         mins_lamda.append(min_lamda)
 
+        ## Para guardar info si se quiere
+        #for key in res.keys():
+        #    p = parray(base_folder + key + '_' + str(subject) + '.txt')
+        #    p = p+res[key]
+
         times.append(seg)
         optimal_vals.append(prob.value)
 
-mins_lamda = mins_lamda.asnumpy()
+        del(res, A)
+        del(C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
+        gc.collect()
+    gc.collect()
 
 
-# Log spended
+print 'Ultimos calculos'
+sys.stdout.flush()
+
+# Persist min vals
+pmins_lamda   = parray(base_folder + 'mins_mses.txt', mins_lamda)
+ptimes        = parray(base_folder +'times.txt',times)
+poptimal_vals = parray(base_folder +'optimal_vals.txt', optimal_vals)
+
+# Log spended time
 total_sec = np.array(times).sum()
 print ' === TOTAL TIME :',  str(int(total_sec//60))+"'", str(int(total_sec%60))+ '"'
+sys.stdout.flush()
 
 # Persist results
 #if base_folder is not None: 
@@ -507,3 +556,4 @@ print 'mins_%s:' % (param_name) , mins_lamda
 
 #dict((v.name(), v.value) for v in prob.variables())
 print 'Lito!'
+sys.stdout.flush()
