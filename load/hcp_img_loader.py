@@ -134,7 +134,7 @@ def __index_not_equals_to(arr, values):
     return [ i for i in xrange(len(arr)) if arr[i] not in values]
 
 
-def load_subject_medium_noS0(subject_number, bval=None, bvalpos=None, bsize=-1, base_folder='.'):
+def load_subject_medium_noS0(subject_number,i,j,k,bval=None, bvalpos=None, bsize=-1, base_folder='.'):
     subject = str(subject_number)
     folder = base_folder +'/HCP/' + subject + '/'
 
@@ -145,7 +145,7 @@ def load_subject_medium_noS0(subject_number, bval=None, bvalpos=None, bsize=-1, 
 
     if bvalpos is not None:
         file_name = folder + 'data_medium40g_12x12x12x40_' + subject + '_b' + str(bval) + '.nii.gz'
-        img = get_img(subject, file_name, bsize=bsize)
+        img = get_img(subject, file_name, bsize=bsize, i=i,j=j,k=k)
         bsize = min(len(bvalpos), img.shape[3])
         bs = bvals[bvalpos[:bsize]]
         bvs = bvecs[:, bvalpos[:bsize]]
@@ -154,7 +154,7 @@ def load_subject_medium_noS0(subject_number, bval=None, bvalpos=None, bsize=-1, 
     else:
         file_name = folder + 'data_medium40g_12x12x12x40_' + subject + '.nii.gz'
         print 'Apunto de cargar patch ', subject
-        img = get_img(subject, file_name, bsize=bsize)
+        img = get_img(subject, file_name, bsize=bsize, i=i,j=j,k=k)
         bsize = img.shape[3]
         bs = bvals[:bsize]
         bvs = bvecs[:, :bsize]

@@ -2,7 +2,7 @@ import time
 import numpy as np
 import cvxpy as cvx
 import load.hcp_img_loader as hcp
-
+import iterators.DmriPatchIterator as d
 from scipy.sparse import csr_matrix
 import experimento1_funciones as e1f
 import load.samples as samples
@@ -273,14 +273,14 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
     return prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1
 
 # In[6]:
-def solveMin_fitCosnt(name_parameter, the_range, subject, loader_func, G, intercept=None, scale=2, max_iters=1500, verbose=False, prob=None):
+def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, intercept=None, scale=2, max_iters=1500, verbose=False, prob=None):
 
     definition_fun = None
     if FORMULA == FORMULA_NO1 :
         # Get input for the subject to fit
-        i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, loader_func, bsize=BSIZE, scale=SCALE)
+        i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject,i,j,k,loader_func, bsize=BSIZE, scale=SCALE)
         print t2, 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
-        _, c_lr, _ = samples.get_sample_of_mapl(subject, loader_func, scale=SCALE)
+        _, c_lr, _ = samples.get_sample_of_mapl(subject,i,j,k, loader_func, scale=SCALE)
         c_lr = samples.split_by(c_lr)
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
@@ -296,7 +296,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject, loader_func, G, interc
                                     intercept=intercept)
     else:
         # Get input for the subject to fit
-        i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, loader_func, bsize=BSIZE, scale=SCALE)
+        i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, i,j,k,loader_func, bsize=BSIZE, scale=SCALE)
         print t2, 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
         i_lr = samples.split_by_bval(i_lr, gtab)
         # Mapl params
@@ -394,13 +394,13 @@ def indexs(a, val):
 
 
 # In[8]:
-def params_for(subjects, sample_maker, bvals_needed=None):
+def params_for(subjects, i, j, k, sample_maker, bvals_needed=None):
     ## The one that left out to validate
 
     if FORMULA == FORMULA_NO2:
-        lr_samples, hr_samples = samples.buildT_grouping_by(subjects, sample_maker, use_bvals=True) #lr, hr
+        lr_samples, hr_samples = samples.buildT_grouping_by(subjects, i, j, k, sample_maker, use_bvals=True) #lr, hr
     else:
-        lr_samples, hr_samples = samples.buildT_grouping_by(subjects, sample_maker)  # lr, hr
+        lr_samples, hr_samples = samples.buildT_grouping_by(subjects, i, j, k, sample_maker)  # lr, hr
 
     # Build downsampling matrix
     print '= Training and fiting n_samples: %d ...' % len(subjects), datetime.datetime.now()
@@ -418,8 +418,8 @@ from exp6_constants import *
 
 # ## Solving the problem and cross-validation (leave one out)
 
-formula_to_use = sys.argv[2]
-#formula_to_use = 'f2'
+#formula_to_use = sys.argv[2]
+formula_to_use = 'f2'
 FORMULA = formulas[formula_to_use]
 
 """
@@ -443,8 +443,8 @@ else:
 
 n_samples = len(subjects)
 
-param_name = sys.argv[1]
-#param_name = 'lamda'
+#param_name = sys.argv[1]
+param_name = 'lamda'
 
 name_parameter = param_name
 rango = params_range[param_name]
@@ -473,66 +473,69 @@ mse3000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
 
 subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
 
-for group_num in xrange(GROUPS):
-    train_subjects = subjects[:GROUP_SIZE]
-    test_set = subjects[GROUP_SIZE:GROUP_SIZE+FITS]
-    subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
+it = d.DmriPatchIterator(range(8, 12, 12), range(7, 14, 14), range(8, 12, 12))
+for i, j, k in it:
+    for group_num in xrange(GROUPS):
+        train_subjects = subjects[:GROUP_SIZE]
+        test_set = subjects[GROUP_SIZE:GROUP_SIZE+FITS]
+        subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
 
-    # Linear regresion of this group
-    print
-    print datetime.datetime.now()
-    train_time = time.time()
-    G, intercept = params_for(train_subjects, sample_maker)
-    train_time = time.time() - train_time
-    print "== Training of Group:%d  %d'%d''"%(group_num, int(train_time/60), train_time%60), datetime.datetime.now()
+        # Linear regresion of this group
+        print
+        print datetime.datetime.now()
+        train_time = time.time()
+        G, intercept = params_for(train_subjects, i, j, k, sample_maker)
+        train_time = time.time() - train_time
+        print "== Training of Group:%d  %d'%d''"%(group_num, int(train_time/60), train_time%60), datetime.datetime.now()
 
-    sys.stdout.flush()
-
-    for subject_index in xrange(len(test_set)):
-        subject = test_set[subject_index]
-        print '/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/'
-        print t1, '== Group:%d of %d Fiting subject:%d of %d (%d)#' % (group_num, GROUPS, subject_index, FITS,  subject), datetime.datetime.now()
-        print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name), datetime.datetime.now()
         sys.stdout.flush()
 
-        A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, res =\
-            solveMin_fitCosnt(name_parameter,
-                              rango,
-                              subject,
-                              loader_func,
-                              G,
-                              intercept=intercept,
-                              scale=2,
-                              max_iters=5,
-                              verbose=False)
+        for subject_index in xrange(len(test_set)):
+            subject = test_set[subject_index]
+            print '/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/'
+            print t1, '== Group:%d of %d Fiting subject:%d(%d,%d,%d) of %d (%d)#' % (group_num, GROUPS, subject_index,i,j,k, FITS,  subject), datetime.datetime.now()
+            print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name), datetime.datetime.now()
+            sys.stdout.flush()
 
-        # Saving all results for analize latter
-        mse[:, subject_index, group_num] = res['mse']
-        mse1000[:, subject_index, group_num] = res['mse1000']
-        mse2000[:, subject_index, group_num] = res['mse2000']
-        mse3000[:, subject_index, group_num] = res['mse3000']
+            A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, res =\
+                solveMin_fitCosnt(name_parameter,
+                                  rango,
+                                  subject,
+                                  i, j, k,
+                                  loader_func,
+                                  G,
+                                  intercept=intercept,
+                                  scale=2,
+                                  max_iters=5,
+                                  verbose=False)
 
-        # Keeping the parameter value of each fitting that produce the min-mse (of all the val tested for the subjetc)
-        index = np.argmin(np.array(res['mse']))
-        min_lamda = rango[index]
-        mins_lamda.append(min_lamda)
+            # Saving all results for analize latter
+            mse[:, subject_index, group_num] = res['mse']
+            mse1000[:, subject_index, group_num] = res['mse1000']
+            mse2000[:, subject_index, group_num] = res['mse2000']
+            mse3000[:, subject_index, group_num] = res['mse3000']
 
-        ## Para guardar info si se quiere
-        #for key in res.keys():
-        #    p = parray(base_folder + key + '_' + str(subject) + '.txt')
-        #    p = p+res[key]
+            # Keeping the parameter value of each fitting that produce the min-mse (of all the val tested for the subjetc)
+            index = np.argmin(np.array(res['mse']))
+            min_lamda = rango[index]
+            mins_lamda.append(min_lamda)
 
-        times.append(seg)
-        #optimal_vals.append(prob.value)
+            ## Para guardar info si se quiere
+            #for key in res.keys():
+            #    p = parray(base_folder + key + '_' + str(subject) + '.txt')
+            #    p = p+res[key]
 
-        if A is not None:
-            del(prob, A, C, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
-        del(res)
-        del(seg)
-        print 'len(gc.garbage[:])', len(gc.garbage[:]),'number of unreachable objects found:', gc.collect()
+            times.append(seg)
+            #optimal_vals.append(prob.value)
 
-    del(G, intercept)
-    #gc.collect()
+            if A is not None:
+                del(prob, A, C, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
+            del(res)
+            del(seg)
+            print 'len(gc.garbage[:])', len(gc.garbage[:]),'number of unreachable objects found:', gc.collect()
+
+        del(G, intercept)
+        #gc.collect()
 
 
 print 'Ultimos calculos', datetime.datetime.now()
