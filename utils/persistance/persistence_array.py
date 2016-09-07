@@ -17,7 +17,7 @@ class parray(object):
 
     def persist(self):
         np.savetxt(self.filename, self.array)
-        #print 'persistiendo en %s'% self.filename
+        print '******persistiendo en %s'% self.filename
 
     def __len__(self):
         return len(self.array)

@@ -8,6 +8,7 @@ import experimento1_funciones as e1f
 import load.samples as samples
 import sys
 import gc
+import datetime
 
 gc.enable()
 
@@ -321,11 +322,12 @@ def solveMin_fitCosnt(name_parameter, the_range, subject, loader_func, G, interc
     info = dict((key, []) for key in measures)
 
     for val in the_range :
+        print '****before define problem', datetime.datetime.now()
         prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun()
 
         parameters = dict( (v.name(), v) for v in prob.parameters())
         parameters[name_parameter].value = val
-        print t3, 'setting new val ',name_parameter, '=',  parameters[name_parameter].value
+        print t3, 'setting new val ',name_parameter, '=',  parameters[name_parameter].value , datetime.datetime.now()
         sys.stdout.flush()
 
         start_time = time.time()
@@ -333,7 +335,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject, loader_func, G, interc
         seg = time.time() - start_time
         minutes = int(seg / 60)
         print t3, "--- time of optimization : %d' %d'' (subject:%s, %s: %f) ---" % (minutes , seg%60, subject, name_parameter, val)
-        print t3, "--- status:", prob.status, "optimal value", prob.value
+        print t3, "--- status:", prob.status, "optimal value", prob.value ,  datetime.datetime.now()
         sys.stdout.flush()
 
         # Get result
@@ -372,16 +374,19 @@ def solveMin_fitCosnt(name_parameter, the_range, subject, loader_func, G, interc
             print t3, 'cvxLaplaceRegExp', cvxLaplaceRegExp.value
 
         if cvxNorm1 is not None:
-            print t3, 'cvxNorm1', cvxNorm1.value
+            print t3, 'cvxNorm1', cvxNorm1.value , datetime.datetime.now()
 
-        gc.collect()
-        print
-        print
-        print
+        del (A, C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
+        print t3, '.', datetime.datetime.now()
         sys.stdout.flush()
-        #del(prob, cvxFidelityExp,  cvxLaplaceRegExp , cvxNorm1)
+        print t3, '.', datetime.datetime.now()
+        print t3, '.'
 
-    return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
+        #del(prob, cvxFidelityExp,  cvxLaplaceRegExp , cvxNorm1)
+    print t3, 'fin fit al values for subject:', subject, datetime.datetime.now()
+    #return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
+    return None, None, seg, None, None, None, None, info
+
 
 def indexs(a, val):
     return [ i for i in xrange(a.size) if a[i] == val]
@@ -398,14 +403,14 @@ def params_for(subjects, sample_maker, bvals_needed=None):
         lr_samples, hr_samples = samples.buildT_grouping_by(subjects, sample_maker)  # lr, hr
 
     # Build downsampling matrix
-    print '= Training and fiting n_samples: %d ...' % len(subjects)
+    print '= Training and fiting n_samples: %d ...' % len(subjects), datetime.datetime.now()
     regr, _ , _, intercept = e1f.train_grouping_by(hr_samples, lr_samples, intercept=True)
 
     G = dict((c,csr_matrix(regr[c].coef_)) for c in regr.keys())
 
     del(lr_samples)
     del(hr_samples)
-    gc.collect()
+    #gc.collect()
 
     return G, intercept
     
@@ -413,8 +418,8 @@ from exp6_constants import *
 
 # ## Solving the problem and cross-validation (leave one out)
 
-#formula_to_use = sys.argv[2]
-formula_to_use = 'f2'
+formula_to_use = sys.argv[2]
+#formula_to_use = 'f2'
 FORMULA = formulas[formula_to_use]
 
 """
@@ -438,12 +443,12 @@ else:
 
 n_samples = len(subjects)
 
-#param_name = sys.argv[1]
-param_name = 'lamda'
+param_name = sys.argv[1]
+#param_name = 'lamda'
 
 name_parameter = param_name
 rango = params_range[param_name]
-print 'STARTING JOB FOR', param_name, 'WITH RANGE:', rango, 'USING FORMULA', FORMULA
+print 'STARTING JOB FOR', param_name, 'WITH RANGE:', rango, 'USING FORMULA', FORMULA , datetime.datetime.now()
 sys.stdout.flush()
 
 base_folder = RES_BASE_FOLDER + formula_to_use + '/' + param_name + '/'
@@ -454,7 +459,7 @@ base_folder = RES_BASE_FOLDER + formula_to_use + '/' + param_name + '/'
 #optimal_vals = parray(base_folder +'optimal_vals.txt')
 mins_lamda   = []
 times        = []
-optimal_vals = []
+#optimal_vals = []
 
 
 GROUPS = n_samples/GROUP_SIZE
@@ -465,6 +470,9 @@ mse1000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
 mse2000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
 mse3000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
 
+
+subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
+
 for group_num in xrange(GROUPS):
     train_subjects = subjects[:GROUP_SIZE]
     test_set = subjects[GROUP_SIZE:GROUP_SIZE+FITS]
@@ -472,17 +480,19 @@ for group_num in xrange(GROUPS):
 
     # Linear regresion of this group
     print
-    print
+    print datetime.datetime.now()
     train_time = time.time()
     G, intercept = params_for(train_subjects, sample_maker)
     train_time = time.time() - train_time
-    print "== Training of Group:%d  %d'%d''"%(group_num, int(train_time/60), train_time%60)
+    print "== Training of Group:%d  %d'%d''"%(group_num, int(train_time/60), train_time%60), datetime.datetime.now()
+
     sys.stdout.flush()
 
     for subject_index in xrange(len(test_set)):
         subject = test_set[subject_index]
-        print t1, '== Group:%d of %d Fiting subject:%d of %d (%d)#' % (group_num, GROUPS, subject_index, FITS,  subject)
-        print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name)
+        print '/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/'
+        print t1, '== Group:%d of %d Fiting subject:%d of %d (%d)#' % (group_num, GROUPS, subject_index, FITS,  subject), datetime.datetime.now()
+        print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name), datetime.datetime.now()
         sys.stdout.flush()
 
         A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, res =\
@@ -494,7 +504,7 @@ for group_num in xrange(GROUPS):
                               intercept=intercept,
                               scale=2,
                               max_iters=5,
-                              verbose=True)
+                              verbose=False)
 
         # Saving all results for analize latter
         mse[:, subject_index, group_num] = res['mse']
@@ -513,25 +523,29 @@ for group_num in xrange(GROUPS):
         #    p = p+res[key]
 
         times.append(seg)
-        optimal_vals.append(prob.value)
+        #optimal_vals.append(prob.value)
 
-        del(res, A)
-        del(C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
-        gc.collect()
-    gc.collect()
+        if A is not None:
+            del(prob, A, C, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
+        del(res)
+        del(seg)
+        print 'len(gc.garbage[:])', len(gc.garbage[:]),'number of unreachable objects found:', gc.collect()
+
+    del(G, intercept)
+    #gc.collect()
 
 
-print 'Ultimos calculos'
+print 'Ultimos calculos', datetime.datetime.now()
 sys.stdout.flush()
 
 # Persist min vals
 pmins_lamda   = parray(base_folder + 'mins_mses.txt', mins_lamda)
 ptimes        = parray(base_folder +'times.txt',times)
-poptimal_vals = parray(base_folder +'optimal_vals.txt', optimal_vals)
+#poptimal_vals = parray(base_folder +'optimal_vals.txt', optimal_vals)
 
 # Log spended time
 total_sec = np.array(times).sum()
-print ' === TOTAL TIME :',  str(int(total_sec//60))+"'", str(int(total_sec%60))+ '"'
+print ' === TOTAL TIME :',  str(int(total_sec//60))+"'", str(int(total_sec%60))+ '"' , datetime.datetime.now()
 sys.stdout.flush()
 
 # Persist results
@@ -555,5 +569,5 @@ print 'rangos:', rango
 print 'mins_%s:' % (param_name) , mins_lamda
 
 #dict((v.name(), v.value) for v in prob.variables())
-print 'Lito!'
+print 'Lito!', datetime.datetime.now()
 sys.stdout.flush()

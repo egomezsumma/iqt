@@ -55,6 +55,8 @@ def get_img(subject, file_name, bsize=-1, size=12, i=8, j=7, k=8):
         #print 'Final patch size:',  data.shape
 
         nifti1img = nib.Nifti1Image(data, img.affine)
+        nib.load()
+        del(img)
         return nifti1img
     else:
         return nib.load(file_name)
@@ -63,7 +65,9 @@ def load_subject_medium(index, numbers, bval=None, bvalpos=None, base_folder='.'
     subject = str(numbers[index])
 
     folder = base_folder + '/HCP/' + subject + '/'
+    print 'Apunto de cargar bvals'
     bvals = get_bvals(subject, folder)
+    print 'Apunto de cargar bvecs'
     bvecs = get_bvecs(subject, folder)
 
     if bvalpos is not None:
@@ -134,7 +138,9 @@ def load_subject_medium_noS0(subject_number, bval=None, bvalpos=None, bsize=-1, 
     subject = str(subject_number)
     folder = base_folder +'/HCP/' + subject + '/'
 
+    print 'Apunto de cargar bvals', subject
     bvals = get_bvals(subject, folder)
+    print 'Apunto de cargar bvecs', subject
     bvecs = get_bvecs(subject, folder)
 
     if bvalpos is not None:
@@ -147,6 +153,7 @@ def load_subject_medium_noS0(subject_number, bval=None, bvalpos=None, bsize=-1, 
         gtab = gradient_table(bvals=bs[idxs], bvecs=bvs[:,idxs])
     else:
         file_name = folder + 'data_medium40g_12x12x12x40_' + subject + '.nii.gz'
+        print 'Apunto de cargar patch ', subject
         img = get_img(subject, file_name, bsize=bsize)
         bsize = img.shape[3]
         bs = bvals[:bsize]
