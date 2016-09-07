@@ -51,7 +51,7 @@ def get_mapl_params(gtab, radial_order=4):
     # map_model_fit = map_model.fit(i_hr)
     tau = map_model.tau
     mu = map_model.mu
-    print 'mu.shape', mu.shape
+    #print 'mu.shape', mu.shape
     M = getM(radial_order, mu, gtab, tau)
     return M, tau, mu
 
@@ -68,6 +68,6 @@ def get_mapl_params2(gtab, radial_order=4):
     # map_model_fit = map_model.fit(i_hr)
     tau = map_model.tau
     mu = map_model.mu
-    print 'mu.shape', mu.shape, mu
+    #print 'mu.shape', mu.shape, mu
     M, U = getMAndU(radial_order, mu, gtab, tau)
     return M, tau, mu, U
