@@ -559,6 +559,8 @@ np.save(base_folder + '/mse1000' +name, mse1000)
 np.save(base_folder + '/mse2000' +name, mse2000)
 np.save(base_folder + '/mse3000' +name, mse3000)
 
+
+mins_lamda = np.array(mins_lamda)
 print 'Subjects fitted = ', mins_lamda.shape
 print 'mean=', mins_lamda.mean(),  mins_lamda
 #plt.bar(xrange(mins_lamda.size), mins_lamda)
