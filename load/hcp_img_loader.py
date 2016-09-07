@@ -25,15 +25,25 @@ def get_bvecs(subject_str, folder=None):
     else:
         return np.loadtxt(folder + 'bvecs_' + subject_str)
 
-def get_img(subject, file_name, bsize=-1, size=12):
+def get_shape(subject):
+    nx, ny, nz, nb = 12, 12, 12, 37
     if IN_NEF :
         src_name = NIFTY_FILE_NEF % (subject)
-        img = nib.load(src_name);
+        img = nib.load(src_name)
 
         nx, ny, nz, nb = img.shape
-        
-        x0, y0, z0 = int(nx*0.65), int(ny*0.5), int(nz*0.65)
-        xf, yf, zf = x0+size,y0+size, z0+size 
+    return nx, ny, nz, nb
+
+
+def get_img(subject, file_name, bsize=-1, size=12, i=8, j=7, k=8):
+    if IN_NEF :
+        src_name = NIFTY_FILE_NEF % (subject)
+        img = nib.load(src_name)
+
+        nx, ny, nz, nb = img.shape
+
+        x0, y0, z0 = int(size*i), int(size*j), int(size*k)
+        xf, yf, zf = x0+size, y0+size, z0+size
     
         bsize = nb if bsize < 0 else bsize
 
