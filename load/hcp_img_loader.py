@@ -55,7 +55,6 @@ def get_img(subject, file_name, bsize=-1, size=12, i=8, j=7, k=8):
         #print 'Final patch size:',  data.shape
 
         nifti1img = nib.Nifti1Image(data, img.affine)
-        nib.load()
         del(img)
         return nifti1img
     else:
