@@ -10,7 +10,7 @@ import sys
 import gc
 import datetime
 
-from threading import Thread
+#from threading import Thread, Lock
 #from multiprocessing import Pool
 
 gc.enable()
@@ -281,9 +281,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     definition_fun = None
     if FORMULA == FORMULA_NO1 :
         # Get input for the subject to fit
-        i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject,i,j,k,loader_func, bsize=BSIZE, scale=SCALE)
-        print t2, 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
-        _, c_lr, _ = samples.get_sample_of_mapl(subject,i,j,k, loader_func, scale=SCALE)
+        _, c_lr, gtab, i_hr, i_lr = samples.get_sample_of_mapl(subject,i,j,k, loader_func, scale=SCALE)
         c_lr = samples.split_by(c_lr)
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
@@ -300,7 +298,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     else:
         # Get input for the subject to fit
         i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, i,j,k,loader_func, bsize=BSIZE, scale=SCALE)
-        print t2, 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
+        #print t2, 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
         i_lr = samples.split_by_bval(i_lr, gtab)
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
@@ -324,9 +322,10 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     info = dict((key, []) for key in measures)
     seg = 0
 
-    """ Sequencial
+    print 'asasasasasas'
+    """ Sequencial"""
     for val in the_range :
-        res = try_value(val,i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose)
+        res = try_value(name_parameter, val,i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose)
         info['mse'].append(res[0])
         info['mse1000'].append(res[1])
         info['mse2000'].append(res[2])
@@ -335,10 +334,10 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
     return None, None, seg, None, None, None, None, info
-    """
+
     """Multiprocess
 
-    params = [(val,i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose) for val in the_range]
+    params = [(name_parameter, val,i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose) for val in the_range]
     all_together = None
     long = len(the_range)
     p = Pool(long)
@@ -354,24 +353,38 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
     return None, None, seg, None, None, None, None, info
     """
-    """Multithreads"""
+    """Multithreads
 
     threads = [None]*len(the_range)
-    results = [None]*len(the_range)
+    results = [(None, None, None, None)]*len(the_range)
 
     params = [
-        (the_range[i], i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose, i, results)
+        (name_parameter, the_range[i], i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose, i, results)
         for i in xrange(len(the_range))]
 
+    print 'Antes de crear threads'
     for i in xrange(len(params)):
         t = Thread(target=try_value, args=params[i])
         threads[i] = t
+        print 'starting job', i , 'with val=', the_range[i]
         t.start()
 
+    print 'A esperar que terminen'
+    some_one_is_alive = True
+    while some_one_is_alive :
+        ala = 1*2
+        some_one_is_alive = False
+        for i in range(len(params)):
+            if threads[i].isAlive():
+                some_one_is_alive = True
+                break
+
     for i in range(len(params)):
-        print 'joining ', i
+        print 'joining thread ', i, ' with val=', the_range[i]
         threads[i].join()
 
+    print 'antes de unir resultados'
+    print results
     for i in xrange(len(the_range)):
         res = results[i]
         info['mse'].append(res[0])
@@ -379,19 +392,21 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
         info['mse2000'].append(res[2])
         info['mse3000'].append(res[3])
         seg += res[4]
-    print t3, 'fin fit al values for subject:', subject, 'segs:', seg, datetime.datetime.now()
+
+    print t3, 'End of fit all values for subject:', subject, 'segs:', seg, datetime.datetime.now()
+    sys.stdout.flush()
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
     return None, None, seg, None, None, None, None, info
+    """
 
-
-def try_value(val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose, i=-1, res=None):
-    print '****before define problem', datetime.datetime.now()
+def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose, i=-1, res=None):
+    print '****before define problem val=', val, '    ',  datetime.datetime.now()
     prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun()
 
     parameters = dict( (v.name(), v) for v in prob.parameters())
     parameters[name_parameter].value = val
-    print t3, 'setting new val ',name_parameter, '=',  parameters[name_parameter].value , datetime.datetime.now()
-    sys.stdout.flush()
+    print t3, 'setting new ',name_parameter, '=',  parameters[name_parameter].value, '    ', datetime.datetime.now()
+    #sys.stdout.flush()
 
     start_time = time.time()
     prob.solve(solver='SCS', max_iters=max_iters, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
@@ -399,7 +414,7 @@ def try_value(val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_i
     minutes = int(seg / 60)
     print t3, "--- time of optimization : %d' %d'' (subject:%s, %s: %f) ---" % (minutes , seg%60, subject, name_parameter, val)
     print t3, "--- status:", prob.status, "optimal value", prob.value ,  datetime.datetime.now()
-    sys.stdout.flush()
+    #sys.stdout.flush()
 
     # Get result
     variables = dict( (v.name(), v) for v in prob.variables())
@@ -421,7 +436,7 @@ def try_value(val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_i
     mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
     #info['mse1000'].append(mse1000)
     print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', mse1000
-    sys.stdout.flush()
+    #sys.stdout.flush()
 
     mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
     #info['mse2000'].append(mse2000)
@@ -440,14 +455,15 @@ def try_value(val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_i
 
     del (A, C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
     print t3, '.', datetime.datetime.now()
-    sys.stdout.flush()
+    #sys.stdout.flush()
     print t3, '.', datetime.datetime.now()
     print t3, '.'
 
     if res is not None:
         res[i] = (mse, mse1000, mse2000, mse3000, seg)
-    #del(prob, cvxFidelityExp,  cvxLaplaceRegExp , cvxNorm1)
-    return mse, mse1000, mse2000, mse3000, seg
+    else:
+        #del(prob, cvxFidelityExp,  cvxLaplaceRegExp , cvxNorm1)
+        return mse, mse1000, mse2000, mse3000, seg
 
 
 def indexs(a, val):
@@ -480,8 +496,8 @@ from exp6_constants import *
 
 # ## Solving the problem and cross-validation (leave one out)
 
-#formula_to_use = sys.argv[2]
-formula_to_use = 'f2'
+formula_to_use = sys.argv[2]
+#formula_to_use = 'f1'
 FORMULA = formulas[formula_to_use]
 
 bvals2000pos = [18, 27, 69, 75, 101, 107]
@@ -497,13 +513,11 @@ else:
 
 n_samples = len(subjects)
 
-#param_name = sys.argv[1]
-param_name = 'lamda'
+param_name = sys.argv[1]
+#param_name = 'lamda'
 
 name_parameter = param_name
 rango = params_range[param_name]
-print 'STARTING JOB FOR', param_name, 'WITH RANGE:', rango, 'USING FORMULA', FORMULA , datetime.datetime.now()
-sys.stdout.flush()
 
 base_folder = RES_BASE_FOLDER + formula_to_use + '/' + param_name + '/'
 
@@ -512,8 +526,17 @@ base_folder = RES_BASE_FOLDER + formula_to_use + '/' + param_name + '/'
 mins_lamda   = []
 times        = []
 
-#group_number = sys.argv[3]
-group_number_job = 0
+group_number_job = int(sys.argv[3])
+#group_number_job = 0
+
+fit_index_job = int(sys.argv[4])%FITS
+#fit_index_job = 0
+
+
+print 'STARTING JOB FOR', param_name, 'USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
+print 'WITH RANGE:', rango,
+sys.stdout.flush()
+
 
 GROUPS = n_samples/GROUP_SIZE
 RANGO= len(rango)
@@ -524,10 +547,10 @@ mse1000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
 mse2000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
 mse3000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
 """
-mse = np.zeros((RANGO, FITS), dtype='float32')
-mse1000 = np.zeros((RANGO, FITS), dtype='float32')
-mse2000 = np.zeros((RANGO, FITS), dtype='float32')
-mse3000 = np.zeros((RANGO, FITS), dtype='float32')
+mse = np.zeros((RANGO), dtype='float32')
+mse1000 = np.zeros((RANGO), dtype='float32')
+mse2000 = np.zeros((RANGO), dtype='float32')
+mse3000 = np.zeros((RANGO), dtype='float32')
 
 
 
@@ -536,9 +559,11 @@ subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
 it = d.DmriPatchIterator(range(8, 12, 12), range(7, 14, 14), range(8, 12, 12))
 for i, j, k in it:
     for group_num in [group_number_job]:
-        train_subjects = subjects[:GROUP_SIZE]
-        test_set = subjects[GROUP_SIZE:GROUP_SIZE+FITS]
-        subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
+        subject_offset = GROUP_SIZE*group_number_job
+        train_subjects = subjects[subject_offset:subject_offset+GROUP_SIZE]
+        test_set = subjects[:subject_offset] + subjects[subject_offset+GROUP_SIZE:]
+        test_set = test_set[:FITS]
+        print 'len(test)', len(test_set), 'len(group)', len(train_subjects)
 
         # Linear regresion of this group
         print
@@ -546,11 +571,11 @@ for i, j, k in it:
         train_time = time.time()
         G, intercept = params_for(train_subjects, i, j, k, sample_maker)
         train_time = time.time() - train_time
-        print "== Training of Group:%d  %d'%d''"%(group_num, int(train_time/60), train_time%60), datetime.datetime.now()
+        print "== Training of Group:%d    (%d'%d'')"%(group_num, int(train_time/60), int(train_time%60)), datetime.datetime.now()
 
         sys.stdout.flush()
 
-        for subject_index in xrange(len(test_set)):
+        for subject_index in [fit_index_job]:
             subject = test_set[subject_index]
             print '/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/'
             print t1, '== Group:%d of %d Fiting subject:%d(%d,%d,%d) of %d (%d)#' % (group_num, GROUPS, subject_index,i,j,k, FITS,  subject), datetime.datetime.now()
@@ -570,10 +595,10 @@ for i, j, k in it:
                                   verbose=False)
 
             # Saving all results for analize latter
-            mse[:, subject_index] = res['mse']
-            mse1000[:, subject_index] = res['mse1000']
-            mse2000[:, subject_index] = res['mse2000']
-            mse3000[:, subject_index] = res['mse3000']
+            mse[:] = res['mse']
+            mse1000[:] = res['mse1000']
+            mse2000[:] = res['mse2000']
+            mse3000[:] = res['mse3000']
 
             # Keeping the parameter value of each fitting that produce the min-mse (of all the val tested for the subjetc)
             index = np.argmin(np.array(res['mse']))
@@ -615,16 +640,18 @@ sys.stdout.flush()
 #if base_folder is not None: 
 #    np.save(base_folder+ 'mins_alphas', mins_lamda)
 
-r, f = mse.shape
-name = '%d_%d_%d' % (r, f, GROUPS)
-np.save(base_folder + 'mse_g'+str(group_number_job) + '_'+ name, mse)
-print 'saved:', base_folder + 'mse_g'+str(group_number_job) + '_'+ name
-np.save(base_folder + 'mse1000_g' +str(group_number_job) + '_'+name, mse1000)
-print 'saved:', base_folder + 'mse1000_g' +str(group_number_job) + '_'+name
-np.save(base_folder + 'mse2000_g' +str(group_number_job) + '_'+name, mse2000)
-print 'saved:', base_folder + 'mse2000_g' +str(group_number_job) + '_'+name
-np.save(base_folder + 'mse3000_g' +str(group_number_job) + '_'+name, mse3000)
-print 'saved:', base_folder + 'mse3000_g' +str(group_number_job) + '_'+name
+
+name = '%d_%d_%d' % (RANGO, FITS, GROUPS)
+base_name = base_folder + 'mse_g'+ str(group_number_job) +'_f'+str(fit_index_job) + '_' + name
+np.save(base_name, mse)
+print 'saved:', base_name
+base_name = base_folder + 'mse%d_g'+ str(group_number_job) +'_f'+str(fit_index_job) + '_' + name
+np.save(base_name%(1000), mse1000)
+print 'saved:', base_name%(1000)
+np.save(base_name%(2000), mse2000)
+print 'saved:', base_name%(2000)
+np.save(base_name%(3000), mse3000)
+print 'saved:', base_name%(3000)
 
 
 mins_lamda = np.array(mins_lamda)
