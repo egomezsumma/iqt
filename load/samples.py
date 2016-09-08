@@ -47,11 +47,11 @@ def get_sample_of_mapl(subject_number, i,j,k,  loader_func, bval=None, bvalpos=N
         c_lr = get_signal(c_lr, S0lr)
 
     # Clean-up
-    del (hr)
-    del (lr)
+    #del (hr)
+    #del (lr)
     del (S0hr)
     del (S0lr)
-    return C_hr, c_lr, gtab
+    return C_hr, c_lr, gtab, hr, lr
 
 
 def get_sample_maker_of_map(loader_func, bval=None, bvalpos=None, bsize=-1, scale=2):
@@ -77,14 +77,21 @@ def buildT_grouping_by(subjects,i, j, k, sample_getter, use_bvals=False):
     Genera tantos conjuntos de entrenamiento como
     bvals distintos tenga el volumne
     """
-    hr, lr, gtab = sample_getter(subjects[0], i, j, k)
-
+    if use_bvals :
+        hr, lr, gtab = sample_getter(subjects[0], i, j, k)
+    else:
+        hr, lr, gtab , _, _ = sample_getter(subjects[0], i, j, k)
 
     dicX = split_by(lr, gtab, use_bvals=use_bvals)
     dicY = split_by(hr, gtab, use_bvals=use_bvals)
     for i in range(1, len(subjects)):
         subject = subjects[i]
-        hr, lr, gtab = sample_getter(subject, i, j, k)
+
+        if use_bvals:
+            hr, lr, gtab = sample_getter(subject, i, j, k)
+        else:
+            hr, lr, gtab, _, _ = sample_getter(subjects[0], i, j, k)
+
         dicX = split_by(lr, gtab, dicX, use_bvals=use_bvals)
         dicY = split_by(hr, gtab, dicY, use_bvals=use_bvals)
     return dicX, dicY
