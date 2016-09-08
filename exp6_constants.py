@@ -15,7 +15,7 @@ formulas = {
 }
 
 params_range = {
-    'lamda': np.arange(0.2, 2.0, 2),#9
+    'lamda': np.arange(0.2, 2.0, 0.1)[:2],#9
     'alpha': np.arange(1.627e-15, 2.0, 0.2),#10
     'beta': np.arange(1.452e-15, 1.452e-14, 1.452e-15),#10
     'gamma': np.arange(0.05, 0.9, 0.09) #10
