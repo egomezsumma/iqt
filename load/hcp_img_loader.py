@@ -137,9 +137,9 @@ def load_subject_medium_noS0(subject_number,i,j,k,bval=None, bvalpos=None, bsize
     subject = str(subject_number)
     folder = base_folder +'/HCP/' + subject + '/'
 
-    print 'Apunto de cargar bvals', subject
+    print '.Apunto de cargar bvals', subject
     bvals = get_bvals(subject, folder)
-    print 'Apunto de cargar bvecs', subject
+    print '.Apunto de cargar bvecs', subject
     bvecs = get_bvecs(subject, folder)
 
     if bvalpos is not None:
