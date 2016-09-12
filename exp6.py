@@ -406,14 +406,27 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
     parameters = dict( (v.name(), v) for v in prob.parameters())
     parameters[name_parameter].value = val
     print t3, 'setting new ',name_parameter, '=',  parameters[name_parameter].value, '    ', datetime.datetime.now()
-    #sys.stdout.flush()
+    sys.stdout.flush()
 
+    verbose=False
     start_time = time.time()
-    prob.solve(solver='SCS', max_iters=max_iters, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
+    prob.solve(solver='SCS', max_iters=200, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
+    print t3, "--- status:", prob.status, "optimal value", prob.value, datetime.datetime.now()
+    sys.stdout.flush()
+    pval_ant = prob.value
+    prob.solve(solver='SCS', max_iters=200, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
+    print t3, "--- status:", prob.status, "optimal value", prob.value, np.abs(pval_ant-prob.value), datetime.datetime.now()
+    sys.stdout.flush()
+    pval_ant = prob.value
+    prob.solve(solver='SCS', max_iters=200, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
+    print t3, "--- status:", prob.status, "optimal value", prob.value, np.abs(pval_ant-prob.value), datetime.datetime.now()
+    sys.stdout.flush()
+    pval_ant = prob.value
+    prob.solve(solver='SCS', max_iters=200, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
     seg = time.time() - start_time
     minutes = int(seg / 60)
     print t3, "--- time of optimization : %d' %d'' (subject:%s, %s: %f) ---" % (minutes , seg%60, subject, name_parameter, val)
-    print t3, "--- status:", prob.status, "optimal value", prob.value ,  datetime.datetime.now()
+    print t3, "--- status:", prob.status, "optimal value", prob.value ,np.abs(pval_ant-prob.value),  datetime.datetime.now()
     #sys.stdout.flush()
 
     # Get result
@@ -591,7 +604,7 @@ for i, j, k in it:
                                   G,
                                   intercept=intercept,
                                   scale=2,
-                                  max_iters=5,
+                                  max_iters=MAX_ITERS,
                                   verbose=False)
 
             # Saving all results for analize latter
