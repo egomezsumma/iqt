@@ -21,6 +21,7 @@ def get_sample_dwi(subject_number,i,j,k, loader_func, bval=None, bvalpos=None,bs
     img, gtab, idxs = loader_func(subject_number,i,j,k, bval, bvalpos,bsize=bsize)
     # Downsample data
     lr, _ = img_utils.downsampling(img, scale)
+    print 'scale=', scale, 'lr.shape=', lr.shape
     data = img.get_data()
     data_noS0 = data[:, :, :, idxs]
     s0_idxs = [i for i in xrange(max(idxs) + 1) if i not in idxs]
@@ -54,11 +55,11 @@ def get_sample_of_mapl(subject_number, i,j,k,  loader_func, bval=None, bvalpos=N
     return C_hr, c_lr, gtab, hr, lr
 
 
-def get_sample_maker_of_map(loader_func, bval=None, bvalpos=None, bsize=-1, scale=2):
-    return lambda subject_num, i, j ,k : get_sample_of_mapl(subject_num, i, j ,k , loader_func, bval, bvalpos, bsize, scale)
+def get_sample_maker_of_map(loader_func, bval=None, bvalpos=None, bsize=-1):
+    return lambda subject_num, i, j ,k, scale : get_sample_of_mapl(subject_num, i, j ,k , loader_func, bval, bvalpos, bsize, scale)
 
-def get_sample_maker_of_dwi(loader_func, bval=None, bvalpos=None, bsize=-1, scale=2):
-    return lambda subject_num, i, j ,k : get_sample_of_dwi(subject_num, i, j ,k , loader_func, bval, bvalpos, bsize=bsize, scale=scale)
+def get_sample_maker_of_dwi(loader_func, bval=None, bvalpos=None, bsize=-1):
+    return lambda subject_num, i, j ,k, scale : get_sample_of_dwi(subject_num, i, j ,k , loader_func, bval, bvalpos, bsize=bsize, scale=scale)
 
 
 def buildT(sample_getter, n_samples):
@@ -72,15 +73,15 @@ def buildT(sample_getter, n_samples):
     return X, Y
 
 
-def buildT_grouping_by(subjects,i, j, k, sample_getter, use_bvals=False):
+def buildT_grouping_by(subjects,i, j, k, sample_getter, use_bvals=False,scale=2):
     """
     Genera tantos conjuntos de entrenamiento como
     bvals distintos tenga el volumne
     """
     if use_bvals :
-        hr, lr, gtab = sample_getter(subjects[0], i, j, k)
+        hr, lr, gtab = sample_getter(subjects[0], i, j, k, scale)
     else:
-        hr, lr, gtab , _, _ = sample_getter(subjects[0], i, j, k)
+        hr, lr, gtab , _, _ = sample_getter(subjects[0], i, j, k, scale)
 
     dicX = split_by(lr, gtab, use_bvals=use_bvals)
     dicY = split_by(hr, gtab, use_bvals=use_bvals)
@@ -88,9 +89,9 @@ def buildT_grouping_by(subjects,i, j, k, sample_getter, use_bvals=False):
         subject = subjects[i]
 
         if use_bvals:
-            hr, lr, gtab = sample_getter(subject, i, j, k)
+            hr, lr, gtab = sample_getter(subject, i, j, k, scale)
         else:
-            hr, lr, gtab, _, _ = sample_getter(subjects[0], i, j, k)
+            hr, lr, gtab, _, _ = sample_getter(subjects[0], i, j, k, scale)
 
         dicX = split_by(lr, gtab, dicX, use_bvals=use_bvals)
         dicY = split_by(hr, gtab, dicY, use_bvals=use_bvals)
