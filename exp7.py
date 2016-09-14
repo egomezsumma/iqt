@@ -426,7 +426,7 @@ def params_for(subjects, i, j, k, sample_maker, bvals_needed=None, scale=2):
 
     # Build downsampling matrix
     print '= Training and fiting n_samples: %d ...' % len(subjects), datetime.datetime.now()
-    regr, _ , _, intercept = e1f.train_grouping_by(hr_samples, lr_samples, intercept=True)
+    regr, _ , _, intercept = e1f.train_grouping_by(hr_samples, lr_samples, intercept=INTERCEPT)
 
     G = dict((c,csr_matrix(regr[c].coef_)) for c in regr.keys())
 
@@ -481,6 +481,7 @@ scales = [4, 3, 2, 1.5, 1.2]
 
 print 'STARTING JOB FOR scale USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
 print 'WITH RANGE:', scales,
+print 'Intercept:', str(INTERCEPT)
 sys.stdout.flush()
 
 
@@ -586,11 +587,11 @@ sys.stdout.flush()
 #    np.save(base_folder+ 'mins_alphas', mins_lamda)
 
 
-name = '%d_%d_%d' % (RANGO, FITS, GROUPS)
-base_name = base_folder + 'mse_g'+ str(group_number_job) +'_f'+str(fit_index_job) + '_' + name
+#name = '%d_%d_%d' % (RANGO, FITS, GROUPS)
+base_name = base_folder + 'mse_g'+ str(group_number_job) +'_f'+str(fit_index_job)
 np.save(base_name, mse)
 print 'saved:', base_name
-base_name = base_folder + 'mse%d_g'+ str(group_number_job) +'_f'+str(fit_index_job) + '_' + name
+base_name = base_folder + 'mse%d_g'+ str(group_number_job) +'_f'+str(fit_index_job)
 np.save(base_name%(1000), mse1000)
 print 'saved:', base_name%(1000)
 np.save(base_name%(2000), mse2000)
