@@ -322,7 +322,7 @@ def solveMin_fitCosnt(subject,i,j,k, loader_func, G, intercept=None, scale=2, ma
     seg = 0
 
     """ Sequencial"""
-    res = try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose)
+    res, A = try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose)
     info['mse'].append(res[0])
     info['mse1000'].append(res[1])
     info['mse2000'].append(res[2])
@@ -331,7 +331,7 @@ def solveMin_fitCosnt(subject,i,j,k, loader_func, G, intercept=None, scale=2, ma
 
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
-    return None, None, seg, None, None, None, None, info
+    return A, None, seg, None, None, None, None, info
 
 def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose, i=-1, res=None):
     prob = None
@@ -397,7 +397,7 @@ def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index,
     if cvxNorm1 is not None:
         print t3, 'cvxNorm1', cvxNorm1.value , datetime.datetime.now()
 
-    del (A, C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
+    del (C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
     print t3, '.', datetime.datetime.now()
     #sys.stdout.flush()
     print t3, '.', datetime.datetime.now()
@@ -405,9 +405,8 @@ def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index,
 
     if res is not None:
         res[i] = (mse, mse1000, mse2000, mse3000, seg)
-    else:
-        #del(prob, cvxFidelityExp,  cvxLaplaceRegExp , cvxNorm1)
-        return mse, mse1000, mse2000, mse3000, seg
+
+    return (mse, mse1000, mse2000, mse3000, seg), A
 
 
 def indexs(a, val):
@@ -437,6 +436,8 @@ def params_for(subjects, i, j, k, sample_maker, bvals_needed=None, scale=2):
     return G, intercept
     
 from conf_exp6 import *
+RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp7/'
+
 
 # ## Solving the problem and cross-validation (leave one out)
 
@@ -444,10 +445,10 @@ from conf_exp6 import *
 formula_to_use = 'f1'
 FORMULA = formulas[formula_to_use]
 
-bvals2000pos = [18, 27, 69, 75, 101, 107]
+#bvals2000pos = [18, 27, 69, 75, 101, 107]
 
 ## Con imagenes pequenas multi-shel
-SCALE=2
+#SCALE=2
 loader_func = hcp.load_subject_medium_noS0
 
 if FORMULA == FORMULA_NO2:
@@ -457,7 +458,7 @@ else:
 
 n_samples = len(subjects)
 
-#param_name = sys.argv[1]
+param_name = sys.argv[1]
 #param_name = 'lamda'
 
 #name_parameter = param_name
@@ -479,7 +480,7 @@ fit_index_job = 0
 
 scales = [4, 3, 2, 1.5, 1.2]
 
-print 'STARTING JOB FOR scale USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
+print 'STARTING JOB FOR', param_name, 'USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
 print 'WITH RANGE:', scales,
 print 'Intercept:', str(INTERCEPT)
 sys.stdout.flush()
@@ -547,6 +548,10 @@ for i, j, k in it:
                 mse1000[si] = res['mse1000'][0]
                 mse2000[si] = res['mse2000'][0]
                 mse3000[si] = res['mse3000'][0]
+
+                if group_number_job == fit_index_job :
+                    print 'saving recontructed image of group', group_number_job, 'in', base_folder + 'A_g%d_scale%d'%(group_number_job,scale)
+                    np.save(base_folder + 'A_g%d_scale%d'%(group_number_job,scale), A)
 
                 ## Para guardar info si se quiere
                 #for key in res.keys():

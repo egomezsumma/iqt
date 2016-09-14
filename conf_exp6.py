@@ -2,7 +2,6 @@ import numpy as np
 import sys
 
 
-RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp6/'
 VMIN, VMAX=0, 1
 BSIZE=55
 
