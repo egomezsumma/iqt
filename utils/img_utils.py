@@ -310,7 +310,7 @@ def _isc3(vol1, vol2, vol3, y=2, b=0, inter='none', cmap='gray', titles=None,vmi
         plt.subplot(1, 3, 1).set_title(titles[0])
         plt.subplot(1, 3, 2).set_title(titles[1])
         plt.subplot(1, 3, 3).set_title(titles[2])
-    #plt.show()
+    plt.show()
     #plt.colorbar()
     return plt, im1,im2,im3
 

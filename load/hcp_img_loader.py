@@ -58,6 +58,7 @@ def get_img(subject, file_name, bsize=-1, size=12, i=8, j=7, k=8):
         del(img)
         return nifti1img
     else:
+        print 'LOADING', file_name
         return nib.load(file_name)
 
 def load_subject_medium(index, numbers, bval=None, bvalpos=None, base_folder='.'):

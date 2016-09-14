@@ -107,4 +107,4 @@ def train_grouping_by(dicX, dicY, verbose=False, intercept=False):
     if intercept:
         return regr, dmri_X_train, dmri_y_train, intercept_data
     else:
-        return regr, dmri_X_train, dmri_y_train
+        return regr, dmri_X_train, dmri_y_train, None
