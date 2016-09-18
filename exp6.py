@@ -89,11 +89,9 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
             fid_b = cvx.sum_squares((Gc * Chr_c + cvxInt_c) - Clr_c)
             #fid_b = cvx.sum_squares((Gc*Chr_c+cvxInt_c) - Clr_c.T)
         else:
-            fid_b = cvx.sum_squares(Gc*Chr_c - Clr_c.T)
-        
-        fidelity_list.append(fid_b)    
-    #cvxNc = cvx.Constant(Nc)
-    #cvxFidelityExp = cvx.inv_pos(cvxNc)*sum(fidelity_list)
+            fid_b = cvx.sum_squares(Gc*Chr_c - Clr_c)
+        fidelity_list.append(fid_b)
+    print '#fidelity_list', len(fidelity_list)
     cvxFidelityExp = sum(fidelity_list)
     
     ## Laplacian regularization
@@ -122,7 +120,7 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
     ## Sparcity weight
     alpha = cvx.Parameter(value=1.627e-15, name='alpha', sign='positive')#4.865e-10
     ## Tv-norm weight
-    gamma = cvx.Parameter(value=0.05, name='gamma',sign='positive')
+    gamma = cvx.Parameter(value=1.0e-15, name='gamma',sign='positive')
     ## Fidelity weight
     lamda = cvx.Parameter(value=1., name='lamda',sign='positive')
 
@@ -138,7 +136,7 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
     # lamda.value =0.5
     
     # Form objective.
-    #obj = cvx.Minimize(cvxFidelityExp + betha*cvxLapaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
+    #obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
     obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1)
          
     # Constraints
@@ -234,7 +232,7 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
     cvxFidelityExp = sum(fidelity_list)
 
     ## 3D Tv-Norm Regularization
-    #cvx3DTvNomExp = tv3d(Yhr, Nx, Ny, Nz, Nb)
+    #cvx3DTvNomExp = tvn.tv3d(Yhr, Nx, Ny, Nz, Nb)
 
     # Sparcity regularization
     cvxNorm1 = cvx.norm1(cvxChr)
@@ -246,7 +244,7 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
     ## Fidelity weight
     lamda = cvx.Parameter(value=1., name='lamda', sign='positive')
     ## 3D-Tv weight
-    gamma = cvx.Parameter(value=2 * 1.627e-15, name='gamma', sign='positive')
+    gamma = cvx.Parameter(value=1.0e-15, name='gamma', sign='positive')
     ### AS VARIABLES
     # beta = cvx.Variable(name='beta')
     # beta.value = 0.2
@@ -331,6 +329,11 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
         info['mse2000'].append(res[2])
         info['mse3000'].append(res[3])
         seg += res[4]
+
+    if group_number_job == fit_index_job:
+        print '$$ saving original image of group', group_number_job, 'in', base_folder + 'i_hr_g%d' % (group_number_job)
+        np.save(base_folder + 'i_hr_g%d' % (group_number_job), i_hr)
+
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
     return None, None, seg, None, None, None, None, info
@@ -409,21 +412,26 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
     print t3, 'setting new ',name_parameter, '=',  parameters[name_parameter].value, '    ', datetime.datetime.now()
     sys.stdout.flush()
 
-    verbose=False
+    max_its = 100
+    rounds = 8
+    verbose = True
     start_time = time.time()
-    prob.solve(solver='SCS', max_iters=200, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
-    print t3, "--- status:", prob.status, "optimal value", prob.value, datetime.datetime.now()
-    sys.stdout.flush()
-    pval_ant = prob.value
-    prob.solve(solver='SCS', max_iters=200, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
-    print t3, "--- status:", prob.status, "optimal value", prob.value, np.abs(pval_ant-prob.value), datetime.datetime.now()
-    sys.stdout.flush()
-    pval_ant = prob.value
-    prob.solve(solver='SCS', max_iters=200, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
-    print t3, "--- status:", prob.status, "optimal value", prob.value, np.abs(pval_ant-prob.value), datetime.datetime.now()
-    sys.stdout.flush()
-    pval_ant = prob.value
-    prob.solve(solver='SCS', max_iters=200, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
+    for i in xrange(rounds):
+        print 'it=', i, 'of', rounds,'max_iters=', max_its
+        prob.solve(solver='SCS', max_iters=max_its, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
+        print t3, "--- status:", prob.status, "optimal value", prob.value, datetime.datetime.now()
+
+        if cvxFidelityExp is not None:
+            print t3, '>cvxFidelityExp', cvxFidelityExp.value
+
+        if cvxLaplaceRegExp is not None:
+            print t3, '>cvxLaplaceRegExp', cvxLaplaceRegExp.value
+
+        if cvxNorm1 is not None:
+            print t3, '>cvxNorm1', cvxNorm1.value, datetime.datetime.now()
+
+        sys.stdout.flush()
+        pval_ant = prob.value
     seg = time.time() - start_time
     minutes = int(seg / 60)
     print t3, "--- time of optimization : %d' %d'' (subject:%s, %s: %f) ---" % (minutes , seg%60, subject, name_parameter, val)
@@ -458,14 +466,10 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
     mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
     #info['mse3000'].append(mse3000)
 
-    if cvxFidelityExp is not None:
-        print t3, 'cvxFidelityExp', cvxFidelityExp.value
 
-    if cvxLaplaceRegExp is not None:
-        print t3, 'cvxLaplaceRegExp', cvxLaplaceRegExp.value
-
-    if cvxNorm1 is not None:
-        print t3, 'cvxNorm1', cvxNorm1.value , datetime.datetime.now()
+    if group_number_job == fit_index_job:
+        print '$$ saving recontructed image of group', group_number_job, 'in', base_folder + 'A_g%d_lamda%d' % (group_number_job, val)
+        np.save(base_folder + 'A_g%d_lamda%d' % (group_number_job, val), A)
 
     del (A, C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
     print t3, '.', datetime.datetime.now()
@@ -507,6 +511,7 @@ def params_for(subjects, i, j, k, sample_maker, bvals_needed=None):
     return G, intercept
     
 from conf_exp6 import *
+RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp6/'
 
 # ## Solving the problem and cross-validation (leave one out)
 
@@ -521,9 +526,9 @@ SCALE=2
 loader_func = hcp.load_subject_medium_noS0
 
 if FORMULA == FORMULA_NO2:
-    sample_maker = samples.get_sample_maker_of_dwi(loader_func, bsize=BSIZE, scale=SCALE)
+    sample_maker = samples.get_sample_maker_of_dwi(loader_func, bsize=BSIZE)
 else:
-    sample_maker = samples.get_sample_maker_of_map(loader_func, bsize=BSIZE, scale=SCALE)
+    sample_maker = samples.get_sample_maker_of_map(loader_func, bsize=BSIZE)
 
 n_samples = len(subjects)
 
