@@ -18,7 +18,8 @@ def get_sample_dwi(subject_number,i,j,k, loader_func, bval=None, bvalpos=None,bs
     :return: Hr, Lr, S0Hr, S0Lr, gtab
     """
     # Load Hcp subject
-    img, gtab, idxs = loader_func(subject_number,i,j,k, bval, bvalpos,bsize=bsize)
+    print 'bsize=', bsize
+    img, gtab, idxs = loader_func(subject_number,i,j,k, bval, bvalpos, bsize=bsize)
     # Downsample data
     lr, _ = img_utils.downsampling(img, scale)
     print 'scale=', scale, 'lr.shape=', lr.shape
@@ -36,8 +37,10 @@ def get_sample_of_dwi(subject_number, i,j,k, loader_func, bval=None, bvalpos=Non
     return hr, lr, gtab
 
 
-def get_sample_of_mapl(subject_number, i,j,k,  loader_func, bval=None, bvalpos=None, bsize=-1, scale=2, multiply_S0=False):
+def get_sample_of_mapl(subject_number, i, j, k, loader_func, bval=None, bvalpos=None, bsize=-1, scale=2, multiply_S0=False):
     hr, lr, S0hr, S0lr, gtab = get_sample_dwi(subject_number, i,j,k, loader_func, bval=bval, bvalpos=bvalpos, bsize=bsize, scale=scale)
+    print 'hr:', hr.shape, 'lr:', lr.shape,
+
     # Calculate MAPL  C_hr:(Nx,Ny,Nz,Nc) c_lr:(nx,ny,nz,nc)
     C_hr = mapl.getC(hr, gtab, radial_order=4)
     c_lr = mapl.getC(lr, gtab, radial_order=4)
@@ -56,7 +59,7 @@ def get_sample_of_mapl(subject_number, i,j,k,  loader_func, bval=None, bvalpos=N
 
 
 def get_sample_maker_of_map(loader_func, bval=None, bvalpos=None, bsize=-1):
-    return lambda subject_num, i, j ,k, scale : get_sample_of_mapl(subject_num, i, j ,k , loader_func, bval, bvalpos, bsize, scale)
+    return lambda subject_num, i, j ,k, scale : get_sample_of_mapl(subject_num, i, j ,k , loader_func, bval, bvalpos, bsize=bsize, scale=scale)
 
 def get_sample_maker_of_dwi(loader_func, bval=None, bvalpos=None, bsize=-1):
     return lambda subject_num, i, j ,k, scale : get_sample_of_dwi(subject_num, i, j ,k , loader_func, bval, bvalpos, bsize=bsize, scale=scale)
