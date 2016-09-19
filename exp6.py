@@ -274,7 +274,7 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
     return prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1
 
 # In[6]:
-def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, intercept=None, scale=2, max_iters=1500, verbose=False, prob=None):
+def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, intercept=None, scale=2, verbose=False, prob=None):
 
     definition_fun = None
     if FORMULA == FORMULA_NO1 :
@@ -323,12 +323,13 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     print 'asasasasasas'
     """ Sequencial"""
     for val in the_range :
-        res = try_value(name_parameter, val,i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose)
-        info['mse'].append(res[0])
-        info['mse1000'].append(res[1])
-        info['mse2000'].append(res[2])
-        info['mse3000'].append(res[3])
-        seg += res[4]
+        mse, mse1000, mse2000, mse3000, seg = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
+        info['mse'].append(mse)
+        info['mse1000'].append(mse1000)
+        info['mse2000'].append(mse2000)
+        info['mse3000'].append(mse3000)
+        seg += seg
+    print 'info[mse]', info['mse']
 
     if group_number_job == fit_index_job:
         print '$$ saving original image of group', group_number_job, 'in', base_folder + 'i_hr_g%d' % (group_number_job)
@@ -401,25 +402,24 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
     return None, None, seg, None, None, None, None, info
     """
-
-def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose, i=-1, res=None):
+def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters=1000, verbose=False, res=None):
     print '****before define problem val=', val, '    ',  datetime.datetime.now()
     prob = None
     prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun()
 
     parameters = dict( (v.name(), v) for v in prob.parameters())
     parameters[name_parameter].value = val
-    print t3, 'setting new ',name_parameter, '=',  parameters[name_parameter].value, '    ', datetime.datetime.now()
+    print t3, 'setting new ', name_parameter, '=',  parameters[name_parameter].value, '    ', datetime.datetime.now()
     sys.stdout.flush()
 
-    max_its = 100
-    rounds = 8
-    verbose = True
+    max_its = MAXIT_BY_ROUND
+    rounds = ROUNDS
+    verbose = VERBOSE
     start_time = time.time()
     for i in xrange(rounds):
         print 'it=', i, 'of', rounds,'max_iters=', max_its
         prob.solve(solver='SCS', max_iters=max_its, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
-        print t3, "--- status:", prob.status, "optimal value", prob.value, datetime.datetime.now()
+        print t3, "--- status:", prob.status, "optimal value=", prob.value, 'i_hr:', i_hr.shape, datetime.datetime.now()
 
         if cvxFidelityExp is not None:
             print t3, '>cvxFidelityExp', cvxFidelityExp.value
@@ -479,9 +479,8 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
 
     if res is not None:
         res[i] = (mse, mse1000, mse2000, mse3000, seg)
-    else:
-        #del(prob, cvxFidelityExp,  cvxLaplaceRegExp , cvxNorm1)
-        return mse, mse1000, mse2000, mse3000, seg
+
+    return mse, mse1000, mse2000, mse3000, seg
 
 
 def indexs(a, val):
@@ -515,8 +514,11 @@ RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp6/'
 
 # ## Solving the problem and cross-validation (leave one out)
 
-formula_to_use = sys.argv[2]
-#formula_to_use = 'f1'
+if IS_NEF :
+    formula_to_use = sys.argv[2]
+else:
+    formula_to_use = 'f1'
+
 FORMULA = formulas[formula_to_use]
 
 bvals2000pos = [18, 27, 69, 75, 101, 107]
@@ -532,8 +534,10 @@ else:
 
 n_samples = len(subjects)
 
-param_name = sys.argv[1]
-#param_name = 'lamda'
+if IS_NEF :
+    param_name = sys.argv[1]
+else:
+    param_name = 'lamda'
 
 name_parameter = param_name
 rango = params_range[param_name]
@@ -545,11 +549,15 @@ base_folder = RES_BASE_FOLDER + formula_to_use + '/' + param_name + '/'
 mins_lamda   = []
 times        = []
 
-group_number_job = int(sys.argv[3])
-#group_number_job = 0
+if IS_NEF :
+    group_number_job = int(sys.argv[3])
+else:
+    group_number_job = 0
 
-fit_index_job = int(sys.argv[4])%FITS
-#fit_index_job = 0
+if IS_NEF :
+    fit_index_job = int(sys.argv[4])%FITS
+else:
+    fit_index_job = 0
 
 
 print 'STARTING JOB FOR', param_name, 'USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
@@ -609,8 +617,7 @@ for i, j, k in it:
                                   loader_func,
                                   G,
                                   intercept=intercept,
-                                  scale=2,
-                                  max_iters=MAX_ITERS,
+                                  scale=SCALE,
                                   verbose=False)
 
             # Saving all results for analize latter
