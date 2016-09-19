@@ -305,7 +305,7 @@ def solveMin_fitCosnt(subject,i,j,k, loader_func, G, intercept=None, scale=2, ma
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
 
         definition_fun = lambda : define_problem_f2(i_lr, i_hr.shape, G, M, U, tau, gtab, scale, intercept=intercept)
-    print 'i_hr',i_hr.shape, 'i_lr', i_lr.shape, 'bvals=', gtab.bvals.shape
+    print 'i_hr', i_hr.shape, 'i_lr', i_lr.shape, 'bvals=', gtab.bvals.shape
     sys.stdout.flush()
 
     Nx, Ny, Nz, Nb = i_hr.shape
@@ -343,15 +343,15 @@ def solveMin_fitCosnt(subject,i,j,k, loader_func, G, intercept=None, scale=2, ma
     return A, None, seg, None, None, None, None, info
 
 
-def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose, i=-1, res=None):
+def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose, res=None):
     prob = None
     prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun()
 
     #parameters = dict( (v.name(), v) for v in prob.parameters())
 
-    max_its=5
-    verbose=True
-    rounds=1
+    max_its=MAXIT_BY_ROUND
+    verbose=VERBOSE
+    rounds=ROUNDS
     start_time = time.time()
     for i in xrange(rounds):
         print 'staring if %d of %d max-it:%d'%(i, rounds, max_its)
@@ -359,6 +359,15 @@ def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index,
         print t3, "--- status:", prob.status, "optimal value", prob.value, datetime.datetime.now()
         sys.stdout.flush()
         pval_ant = prob.value
+
+        if cvxFidelityExp is not None:
+            print t3, 'cvxFidelityExp', cvxFidelityExp.value
+
+        if cvxLaplaceRegExp is not None:
+            print t3, 'cvxLaplaceRegExp', cvxLaplaceRegExp.value
+
+        if cvxNorm1 is not None:
+            print t3, 'cvxNorm1', cvxNorm1.value, datetime.datetime.now()
 
     seg = time.time() - start_time
     minutes = int(seg / 60)
@@ -394,14 +403,6 @@ def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index,
     mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
     #info['mse3000'].append(mse3000)
 
-    if cvxFidelityExp is not None:
-        print t3, 'cvxFidelityExp', cvxFidelityExp.value
-
-    if cvxLaplaceRegExp is not None:
-        print t3, 'cvxLaplaceRegExp', cvxLaplaceRegExp.value
-
-    if cvxNorm1 is not None:
-        print t3, 'cvxNorm1', cvxNorm1.value , datetime.datetime.now()
 
     del (C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
     print t3, '.', datetime.datetime.now()
@@ -493,7 +494,7 @@ else:
 
 
 scales = [4, 3, 2, 1.5, 1.2]
-scales = scales[-2:]
+#scales = scales[-2:]
 
 print 'STARTING JOB FOR', param_name, 'USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
 print 'WITH RANGE:', scales,
