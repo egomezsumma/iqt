@@ -35,7 +35,7 @@ def get_shape(subject):
     return nx, ny, nz, nb
 
 
-def get_img(subject, file_name, bsize=-1, size=12, i=8, j=7, k=8):
+def get_img(subject, file_name, bsize=55, size=12, i=8, j=7, k=8):
     if IN_NEF :
         src_name = NIFTY_FILE_NEF % (subject)
         img = nib.load(src_name)
@@ -134,7 +134,7 @@ def __index_not_equals_to(arr, values):
     return [ i for i in xrange(len(arr)) if arr[i] not in values]
 
 
-def load_subject_medium_noS0(subject_number,i,j,k,bval=None, bvalpos=None, bsize=-1, base_folder='.'):
+def load_subject_medium_noS0(subject_number,i,j,k,bval=None, bvalpos=None, bsize=55, base_folder='.'):
     subject = str(subject_number)
     folder = base_folder +'/HCP/' + subject + '/'
 

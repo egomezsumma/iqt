@@ -6,7 +6,7 @@ import mymapl.minmapl as mapl
 
 
 
-def get_sample_dwi(subject_number,i,j,k, loader_func, bval=None, bvalpos=None,bsize=-1, scale=2):
+def get_sample_dwi(subject_number,i,j,k, loader_func, bval=None, bvalpos=None,bsize=55, scale=2):
     """
     Get the sample for the subjets numbers[index] and retur
     :param index: index on numbers of subject needed
@@ -28,16 +28,20 @@ def get_sample_dwi(subject_number,i,j,k, loader_func, bval=None, bvalpos=None,bs
     s0_idxs = [i for i in xrange(max(idxs) + 1) if i not in idxs]
     return data_noS0, lr[:, :, :, idxs], data[:, :, :, s0_idxs], lr[:, :, :, s0_idxs], gtab
 
+def mm(A):
+    return A.min(), A.max()
 
 def get_sample_of_dwi(subject_number, i,j,k, loader_func, bval=None, bvalpos=None, bsize=-1, scale=2):
     hr, lr, S0hr, S0lr, gtab = get_sample_dwi(subject_number,i,j,k, loader_func, bval=None, bvalpos=None, bsize=bsize, scale=scale)
+    print 'mm antes: ', mm(hr), mm(lr)
     hr = get_atenuation(hr, S0hr)
     lr = get_atenuation(lr, S0lr)
+    print 'mm desp: ', mm(hr), mm(lr)
     del (S0hr, S0lr)
     return hr, lr, gtab
 
 
-def get_sample_of_mapl(subject_number, i, j, k, loader_func, bval=None, bvalpos=None, bsize=-1, scale=2, multiply_S0=False):
+def get_sample_of_mapl(subject_number, i, j, k, loader_func, bval=None, bvalpos=None, bsize=55, scale=2, multiply_S0=False):
     hr, lr, S0hr, S0lr, gtab = get_sample_dwi(subject_number, i,j,k, loader_func, bval=bval, bvalpos=bvalpos, bsize=bsize, scale=scale)
     print 'hr:', hr.shape, 'lr:', lr.shape,
 

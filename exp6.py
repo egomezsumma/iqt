@@ -279,7 +279,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     definition_fun = None
     if FORMULA == FORMULA_NO1 :
         # Get input for the subject to fit
-        _, c_lr, gtab, i_hr, i_lr = samples.get_sample_of_mapl(subject,i,j,k, loader_func, scale=SCALE)
+        _, c_lr, gtab, i_hr, i_lr = samples.get_sample_of_mapl(subject,i,j,k, loader_func, bsize=BSIZE, scale=SCALE)
         c_lr = samples.split_by(c_lr)
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
