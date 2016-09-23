@@ -7,13 +7,13 @@ from scipy.sparse import csr_matrix
 import experimento1_funciones as e1f
 import load.samples as samples
 import sys
-import gc
+#import gc
 import datetime
 
 #from threading import Thread, Lock
 #from multiprocessing import Pool
 
-gc.enable()
+#gc.enable()
 
 #def uprint(*msg):
 #    print msg
@@ -53,13 +53,14 @@ import optimization.tvnorm3d as tvn
 # 
 
 # In[5]:
-def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None):
+def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None, toprint=''):
     Nx, Ny, Nz = (12, 12, 12)#TODO: pasar
     Nb, Nc = M.shape
-    
+
     ## LR volumes
     Clr = c_lr
-    
+    print '%%%%%%%%%',toprint, id(Clr)    
+
     ## MAPL params
     #cvxChr = cvx.Constant(C_hr.reshape(-1, order='F'))
     
@@ -108,7 +109,7 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
     cvxC_byCoef = cvx.reshape(cvxChr, vhr, Nc)
     # (Nb,Nc)*(Nc,vhr) = (Nb, vhr).T = (vhr, Nb) 
     cvxYhr = cvx.reshape((M*cvxC_byCoef.T).T, vhr*Nb, 1)
-    #vx3DTvNomExp = tvn.tv3d(cvxYhr, Nx, Ny, Nz, Nb)
+    cvx3DTvNomExp = tvn.tv3d(cvxYhr, Nx, Ny, Nz, Nb)
     
     
     #Sparcity regularization
@@ -136,12 +137,13 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
     # lamda.value =0.5
     
     # Form objective.
-    #obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
-    obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1)
+    obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
+    #obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1)
          
     # Constraints
+    constraints = []
     #constraints = [lamda > 0 , alpha > 0, beta > 0]
-    constraints = [cvxYhr >= 0]
+    #constraints.append(cvxYhr >= 0)
     #Agregar q M*C es positivo o deberia
 
     # Form and solve problem.
@@ -284,7 +286,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
 
-        definition_fun = lambda : define_problem_f1(
+        definition_fun = lambda toprint : define_problem_f1(
                                     c_lr,
                                     vhr,
                                     vlr,
@@ -292,7 +294,8 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
                                     M, U,tau,
                                     gtab,
                                     scale,
-                                    intercept=intercept)
+                                    intercept=intercept,
+                                    toprint=toprint)
     else:
         # Get input for the subject to fit
         i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, i,j,k,loader_func, bsize=BSIZE, scale=SCALE)
@@ -405,7 +408,8 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
 def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters=1000, verbose=False, res=None):
     print '****before define problem val=', val, '    ',  datetime.datetime.now()
     prob = None
-    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun()
+    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun(name_parameter+'='+str(val))
+    print 'id(prob)', id(prob)
 
     parameters = dict( (v.name(), v) for v in prob.parameters())
     parameters[name_parameter].value = val
@@ -431,6 +435,7 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
             print t3, '>cvxNorm1', cvxNorm1.value, datetime.datetime.now()
 
         sys.stdout.flush()
+
         pval_ant = prob.value
     seg = time.time() - start_time
     minutes = int(seg / 60)
@@ -443,27 +448,31 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
 
     cvxChr = variables['cvxChr']
     C = np.asarray(cvxChr.value, dtype='float32').reshape((Nx, Ny, Nz, Nc), order='F')
+    print id(cvxChr),'@@@@@@@ C.mean=',  C.mean()
 
     if 'cvxYhr' in variables :
+        print 'Tomando cvxYhr'
         cvxYhr = variables['cvxYhr']
         A = np.asarray(cvxYhr.value, dtype='float32').reshape((Nx, Ny, Nz, Nb), order='F')
     else:
+        print 'tomando M*C'
         A = M.dot(C.reshape((Nx*Ny*Nz, Nc), order='F').T).T
         A = A.reshape((Nx, Ny, Nz, Nb), order='F')
 
-    mse = ((A-i_hr)**2).mean()
-    #info['mse'].append(mse)
-    print t3, 'mse=', mse
 
-    mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
+    _mse = ((A-i_hr)**2).mean()
+    #info['mse'].append(mse)
+    print t3, 'mse=', _mse, mse
+
+    _mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
     #info['mse1000'].append(mse1000)
-    print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', mse1000
+    print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', _mse1000
     #sys.stdout.flush()
 
-    mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
+    _mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
     #info['mse2000'].append(mse2000)
 
-    mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
+    _mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
     #info['mse3000'].append(mse3000)
 
 
@@ -478,9 +487,9 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
     print t3, '.'
 
     if res is not None:
-        res[i] = (mse, mse1000, mse2000, mse3000, seg)
+        res[i] = (_mse, _mse1000, _mse2000, _mse3000, seg)
 
-    return mse, mse1000, mse2000, mse3000, seg
+    return _mse, _mse1000, _mse2000, _mse3000, seg
 
 
 def indexs(a, val):
@@ -628,6 +637,7 @@ for i, j, k in it:
 
             # Keeping the parameter value of each fitting that produce the min-mse (of all the val tested for the subjetc)
             index = np.argmin(np.array(res['mse']))
+            print 'index del minimo:', index
             min_lamda = rango[index]
             mins_lamda.append(min_lamda)
 
