@@ -439,7 +439,7 @@ def params_for(subjects, i, j, k, sample_maker, bvals_needed=None, scale=2):
     return G, intercept
     
 from conf_exp6 import *
-RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp7/'
+RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp9/'
 
 
 # ## Solving the problem and cross-validation (leave one out)
@@ -471,7 +471,7 @@ else:
 #name_parameter = param_name
 #rango = params_range[param_name]
 
-base_folder = RES_BASE_FOLDER + formula_to_use + '/scale/'
+base_folder = RES_BASE_FOLDER + formula_to_use + '/gsize/'
 
 # Metrics to save
 
@@ -539,7 +539,7 @@ for i, j, k in it:
                 subject = test_set[subject_index]
                 print '/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/'
                 print t1, '== Group of size: %d Fiting subject:%d(%d,%d,%d) (%d)#' % (group_size, subject_index,i,j,k, subject), datetime.datetime.now()
-                print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, 'scale'), datetime.datetime.now()
+                print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, 'gsize'), datetime.datetime.now()
                 sys.stdout.flush()
 
                 A, i_hr, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, res =\
@@ -628,7 +628,7 @@ print 'mean=', mins_lamda.mean(),  mins_lamda
 
 # In[11]:
 print 'rangos:', group_sizes
-print 'mins_%s:' % ('scale') , mins_lamda
+print 'mins_%s:' % ('gsize') , mins_lamda
 
 #dict((v.name(), v.value) for v in prob.variables())
 print 'Lito!', datetime.datetime.now()
