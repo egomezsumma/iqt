@@ -18,11 +18,14 @@ params_range = {
     #'lamda': np.arange(1.0, 20.0, 2.0),#10
     #'lamda': np.arange(0.2, 2.0, 0.2)
     #'lamda': np.arange(100, 1001, 100),#10
-    'lamda': np.arange(1000, 10001, 1000),#10
+    #'lamda': np.arange(1000, 10001, 1000),#10
+    'lamda' : np.arange(10000, 1000001, 100000),#10
     'alpha': np.arange(1.627e-15, 0.5, 0.05),#10
     'beta': np.arange(1.452e-15, 20, 2),#10
     #'beta': np.arange(1.452e-15, 1.452e-14, 1.452e-15),#10
-    'gamma': np.arange(0.05, 0.9, 0.09)#10
+    #'gamma': np.arange(0.05, 0.9, 0.09)#10
+    #'gamma': np.arange(0.5e-20, 1.0e-15,9.99995e-17)#10
+    'gamma': np.arange(1.0e-15, 1,0.0999999999999999)#10
 }
 
 
