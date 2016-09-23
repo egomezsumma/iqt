@@ -34,8 +34,8 @@ def mm(A):
 def get_sample_of_dwi(subject_number, i,j,k, loader_func, bval=None, bvalpos=None, bsize=-1, scale=2):
     hr, lr, S0hr, S0lr, gtab = get_sample_dwi(subject_number,i,j,k, loader_func, bval=None, bvalpos=None, bsize=bsize, scale=scale)
     print 'mm antes: ', mm(hr), mm(lr)
-    hr = get_atenuation(hr, S0hr)
-    lr = get_atenuation(lr, S0lr)
+    hr = get_atenuation(hr, S0hr, 'hr'+str(subject_number))
+    lr = get_atenuation(lr, S0lr, 'lr'+str(subject_number))
     print 'mm desp: ', mm(hr), mm(lr)
     del (S0hr, S0lr)
     return hr, lr, gtab
@@ -43,7 +43,11 @@ def get_sample_of_dwi(subject_number, i,j,k, loader_func, bval=None, bvalpos=Non
 
 def get_sample_of_mapl(subject_number, i, j, k, loader_func, bval=None, bvalpos=None, bsize=55, scale=2, multiply_S0=False):
     hr, lr, S0hr, S0lr, gtab = get_sample_dwi(subject_number, i,j,k, loader_func, bval=bval, bvalpos=bvalpos, bsize=bsize, scale=scale)
-    print 'hr:', hr.shape, 'lr:', lr.shape,
+    print 'hr:', hr.shape, 'lr:', lr.shape
+
+    hr = get_atenuation(hr, S0hr, 'hr'+str(subject_number))
+    lr = get_atenuation(lr, S0lr, 'lr'+str(subject_number))
+
 
     # Calculate MAPL  C_hr:(Nx,Ny,Nz,Nc) c_lr:(nx,ny,nz,nc)
     C_hr = mapl.getC(hr, gtab, radial_order=4)
@@ -59,6 +63,7 @@ def get_sample_of_mapl(subject_number, i, j, k, loader_func, bval=None, bvalpos=
     #del (lr)
     del (S0hr)
     del (S0lr)
+    print 'hr:', mm(hr), 'lr:', mm(lr)
     return C_hr, c_lr, gtab, hr, lr
 
 
@@ -166,13 +171,15 @@ def split_by_coef(img, res=None):
     return res
 
 
-def get_atenuation(Sq, S0):
+def get_atenuation(Sq, S0, str2log=""):
+    print 'mm antes: ', mm(Sq), str2log
     _S0 = S0
     if len(S0.shape) > 3:
         _S0 = S0.mean(axis=3)
     _S0[_S0==0.0] = 0.0001 # para que no explote la division por cero
     for b in xrange(Sq.shape[3]):
         Sq[:, :, :, b] = np.divide(Sq[:, :, :, b], _S0)
+    print 'mm desp: ', mm(Sq), str2log
     return Sq
 
 
