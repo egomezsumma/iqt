@@ -109,6 +109,7 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None,
     cvxC_byCoef = cvx.reshape(cvxChr, vhr, Nc)
     # (Nb,Nc)*(Nc,vhr) = (Nb, vhr).T = (vhr, Nb) 
     cvxYhr = cvx.reshape((M*cvxC_byCoef.T).T, vhr*Nb, 1)
+    print 'defining cvx3DTvNomExp'
     cvx3DTvNomExp = tvn.tv3d(cvxYhr, Nx, Ny, Nz, Nb)
     
     
@@ -137,7 +138,7 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None,
     # lamda.value =0.5
     
     # Form objective.
-    obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
+    obj  = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
     #obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1)
          
     # Constraints
@@ -234,7 +235,7 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
     cvxFidelityExp = sum(fidelity_list)
 
     ## 3D Tv-Norm Regularization
-    #cvx3DTvNomExp = tvn.tv3d(Yhr, Nx, Ny, Nz, Nb)
+    cvx3DTvNomExp = tvn.tv3d(Yhr, Nx, Ny, Nz, Nb)
 
     # Sparcity regularization
     cvxNorm1 = cvx.norm1(cvxChr)
@@ -305,6 +306,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
 
         definition_fun = lambda : define_problem_f2(i_lr, i_hr.shape, G, M, U, tau, gtab, scale, intercept=intercept)
+    print 'i_hr', i_hr.shape, 'i_lr', i_lr.shape, 'bvals=', gtab.bvals.shape
     sys.stdout.flush()
 
     Nx, Ny, Nz, Nb = i_hr.shape
@@ -323,14 +325,14 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     info = dict((key, []) for key in measures)
     seg = 0
 
-    print 'asasasasasas'
+   
     """ Sequencial"""
     for val in the_range :
-        mse, mse1000, mse2000, mse3000, seg = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
-        info['mse'].append(mse)
-        info['mse1000'].append(mse1000)
-        info['mse2000'].append(mse2000)
-        info['mse3000'].append(mse3000)
+        _mse, _mse1000, _mse2000, _mse3000, seg = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
+        info['mse'].append(_mse)
+        info['mse1000'].append(_mse1000)
+        info['mse2000'].append(_mse2000)
+        info['mse3000'].append(_mse3000)
         seg += seg
     print 'info[mse]', info['mse']
 
@@ -477,14 +479,15 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
 
 
     if group_number_job == fit_index_job:
-        print '$$ saving recontructed image of group', group_number_job, 'in', base_folder + 'A_g%d_lamda%d' % (group_number_job, val)
-        np.save(base_folder + 'A_g%d_lamda%d' % (group_number_job, val), A)
+        print '$$ saving recontructed image of group', group_number_job, 'in', base_folder + 'A_g%d_val%d' % (group_number_job, val)
+        np.save(base_folder + 'A_g%d_val%d' % (group_number_job, val), A)
 
     del (A, C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
     print t3, '.', datetime.datetime.now()
     #sys.stdout.flush()
     print t3, '.', datetime.datetime.now()
     print t3, '.'
+
 
     if res is not None:
         res[i] = (_mse, _mse1000, _mse2000, _mse3000, seg)
@@ -508,7 +511,7 @@ def params_for(subjects, i, j, k, sample_maker, bvals_needed=None):
 
     # Build downsampling matrix
     print '= Training and fiting n_samples: %d ...' % len(subjects), datetime.datetime.now()
-    regr, _ , _, intercept = e1f.train_grouping_by(hr_samples, lr_samples, intercept=True)
+    regr, _ , _, intercept = e1f.train_grouping_by(hr_samples, lr_samples, intercept=INTERCEPT)
 
     G = dict((c,csr_matrix(regr[c].coef_)) for c in regr.keys())
 
@@ -530,7 +533,7 @@ else:
 
 FORMULA = formulas[formula_to_use]
 
-bvals2000pos = [18, 27, 69, 75, 101, 107]
+#bvals2000pos = [18, 27, 69, 75, 101, 107]
 
 ## Con imagenes pequenas multi-shel
 SCALE=2
@@ -570,8 +573,10 @@ else:
 
 
 print 'STARTING JOB FOR', param_name, 'USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
-print 'WITH RANGE:', rango,
+print 'WITH RANGE:', rango
+print 'Intercept:', str(INTERCEPT)
 sys.stdout.flush()
+
 
 
 GROUPS = n_samples/GROUP_SIZE
@@ -653,7 +658,7 @@ for i, j, k in it:
                 del(prob, A, C, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
             del(res)
             del(seg)
-            print 'len(gc.garbage[:])', len(gc.garbage[:]),'number of unreachable objects found:', gc.collect()
+            #print 'len(gc.garbage[:])', len(gc.garbage[:]),'number of unreachable objects found:', gc.collect()
 
         del(G, intercept)
         #gc.collect()
@@ -678,10 +683,10 @@ sys.stdout.flush()
 
 
 name = '%d_%d_%d' % (RANGO, FITS, GROUPS)
-base_name = base_folder + 'mse_g'+ str(group_number_job) +'_f'+str(fit_index_job) + '_' + name
+base_name = base_folder + 'mse_g'+ str(group_number_job) +'_f'+str(fit_index_job)
 np.save(base_name, mse)
 print 'saved:', base_name
-base_name = base_folder + 'mse%d_g'+ str(group_number_job) +'_f'+str(fit_index_job) + '_' + name
+base_name = base_folder + 'mse%d_g'+ str(group_number_job) +'_f'+str(fit_index_job)
 np.save(base_name%(1000), mse1000)
 print 'saved:', base_name%(1000)
 np.save(base_name%(2000), mse2000)
