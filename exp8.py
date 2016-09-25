@@ -7,13 +7,13 @@ from scipy.sparse import csr_matrix
 import experimento1_funciones as e1f
 import load.samples as samples
 import sys
-import gc
+#import gc
 import datetime
 
 #from threading import Thread, Lock
 #from multiprocessing import Pool
 
-gc.enable()
+#gc.enable()
 
 #def uprint(*msg):
 #    print msg
@@ -53,13 +53,14 @@ import optimization.tvnorm3d as tvn
 # 
 
 # In[5]:
-def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None):
+def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None, toprint=''):
     Nx, Ny, Nz = (12, 12, 12)#TODO: pasar
     Nb, Nc = M.shape
-    
+
     ## LR volumes
     Clr = c_lr
-    
+    print '%%%%%%%%%',toprint, id(Clr)    
+
     ## MAPL params
     #cvxChr = cvx.Constant(C_hr.reshape(-1, order='F'))
     
@@ -90,10 +91,8 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
             #fid_b = cvx.sum_squares((Gc*Chr_c+cvxInt_c) - Clr_c.T)
         else:
             fid_b = cvx.sum_squares(Gc*Chr_c - Clr_c)
-        
-        fidelity_list.append(fid_b)    
-    #cvxNc = cvx.Constant(Nc)
-    #cvxFidelityExp = cvx.inv_pos(cvxNc)*sum(fidelity_list)
+        fidelity_list.append(fid_b)
+    print '#fidelity_list', len(fidelity_list)
     cvxFidelityExp = sum(fidelity_list)
     
     ## Laplacian regularization
@@ -110,6 +109,7 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
     cvxC_byCoef = cvx.reshape(cvxChr, vhr, Nc)
     # (Nb,Nc)*(Nc,vhr) = (Nb, vhr).T = (vhr, Nb) 
     cvxYhr = cvx.reshape((M*cvxC_byCoef.T).T, vhr*Nb, 1)
+    print 'defining cvx3DTvNomExp'
     #cvx3DTvNomExp = tvn.tv3d(cvxYhr, Nx, Ny, Nz, Nb)
     
     
@@ -138,12 +138,13 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
     # lamda.value =0.5
     
     # Form objective.
-    #obj = cvx.Minimize(cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
+    #obj  = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
     obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1)
          
     # Constraints
+    constraints = []
     #constraints = [lamda > 0 , alpha > 0, beta > 0]
-    constraints = [cvxYhr >= 0]
+    #constraints.append(cvxYhr >= 0)
     #Agregar q M*C es positivo o deberia
 
     # Form and solve problem.
@@ -317,7 +318,7 @@ def try_bsize(subject, i, j, k, bsize, loader_func, G, intercept=None, scale=2, 
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
 
-        definition_fun = lambda : define_problem_f1(
+        definition_fun = lambda toprint : define_problem_f1(
                                     c_lr,
                                     vhr,
                                     vlr,
@@ -325,7 +326,8 @@ def try_bsize(subject, i, j, k, bsize, loader_func, G, intercept=None, scale=2, 
                                     M, U,tau,
                                     gtab,
                                     scale,
-                                    intercept=intercept)
+                                    intercept=intercept,
+                                    toprint=toprint)
     else:
         # Get input for the subject to fit
         i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, i,j,k,loader_func, bsize=bsize, scale=scale)
@@ -335,6 +337,7 @@ def try_bsize(subject, i, j, k, bsize, loader_func, G, intercept=None, scale=2, 
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
 
         definition_fun = lambda : define_problem_f2(i_lr, i_hr.shape, G, M, U, tau, gtab, scale, intercept=intercept)
+    print 'i_hr', i_hr.shape, 'i_lr', i_lr.shape, 'bvals=', gtab.bvals.shape
     sys.stdout.flush()
 
     Nx, Ny, Nz, Nb = i_hr.shape
@@ -378,27 +381,31 @@ def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index,
 
     cvxChr = variables['cvxChr']
     C = np.asarray(cvxChr.value, dtype='float32').reshape((Nx, Ny, Nz, Nc), order='F')
+    print id(cvxChr),'@@@@@@@ C.mean=',  C.mean()
 
     if 'cvxYhr' in variables :
+        print 'Tomando cvxYhr'
         cvxYhr = variables['cvxYhr']
         A = np.asarray(cvxYhr.value, dtype='float32').reshape((Nx, Ny, Nz, Nb), order='F')
     else:
+        print 'tomando M*C'
         A = M.dot(C.reshape((Nx*Ny*Nz, Nc), order='F').T).T
         A = A.reshape((Nx, Ny, Nz, Nb), order='F')
 
-    mse = ((A-i_hr)**2).mean()
-    #info['mse'].append(mse)
-    print t3, 'mse=', mse
 
-    mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
+    _mse = ((A-i_hr)**2).mean()
+    #info['mse'].append(mse)
+    print t3, 'mse=', _mse, mse
+
+    _mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
     #info['mse1000'].append(mse1000)
-    print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', mse1000
+    print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', _mse1000
     #sys.stdout.flush()
 
-    mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
+    _mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
     #info['mse2000'].append(mse2000)
 
-    mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
+    _mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
     #info['mse3000'].append(mse3000)
 
     if cvxFidelityExp is not None:
@@ -418,9 +425,9 @@ def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index,
 
 
     if res is not None:
-        res[i] = (mse, mse1000, mse2000, mse3000, seg)
+        res[i] = (_mse, _mse1000, _mse2000, _mse3000, seg)
 
-    return (mse, mse1000, mse2000, mse3000, seg), A, seg
+    return (_mse, _mse1000, _mse2000, _mse3000, seg), A, seg
 
 
 def indexs(a, val):
@@ -455,14 +462,17 @@ RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp8/'
 
 # ## Solving the problem and cross-validation (leave one out)
 
-formula_to_use = sys.argv[2]
-#formula_to_use = 'f1'
+if IS_NEF :
+    formula_to_use = sys.argv[2]
+else:
+    formula_to_use = 'f1'
+
 FORMULA = formulas[formula_to_use]
 
 #bvals2000pos = [18, 27, 69, 75, 101, 107]
 
 ## Con imagenes pequenas multi-shel
-#SCALE=2
+SCALE=2
 loader_func = hcp.load_subject_medium_noS0
 
 if FORMULA == FORMULA_NO2:
@@ -472,10 +482,12 @@ else:
 
 n_samples = len(subjects)
 
-param_name = sys.argv[1]
-#param_name = 'lamda'
+if IS_NEF :
+    param_name = sys.argv[1]
+else:
+    param_name = 'lamda'
 
-#name_parameter = param_name
+name_parameter = param_name
 #rango = params_range[param_name]
 
 base_folder = RES_BASE_FOLDER + formula_to_use + '/bsize/'
@@ -485,11 +497,15 @@ base_folder = RES_BASE_FOLDER + formula_to_use + '/bsize/'
 mins_lamda   = []
 times        = []
 
-group_number_job = int(sys.argv[3])
-#group_number_job = 0
+if IS_NEF :
+    group_number_job = int(sys.argv[3])
+else:
+    group_number_job = 0
 
-fit_index_job = int(sys.argv[4])%FITS
-#fit_index_job = 0
+if IS_NEF :
+    fit_index_job = int(sys.argv[4])%FITS
+else:
+    fit_index_job = 0
 
 
 bsizes = [55, 50, 45, 40, 35, 30, 25, 20, 15, 10]
@@ -515,6 +531,7 @@ mse = np.zeros((RANGO), dtype='float32')
 mse1000 = np.zeros((RANGO), dtype='float32')
 mse2000 = np.zeros((RANGO), dtype='float32')
 mse3000 = np.zeros((RANGO), dtype='float32')
+
 
 
 subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
