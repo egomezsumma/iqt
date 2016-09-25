@@ -7,7 +7,7 @@ from scipy.sparse import csr_matrix
 import experimento1_funciones as e1f
 import load.samples as samples
 import sys
-import gc
+#import gc
 import datetime
 
 #from threading import Thread, Lock
@@ -53,13 +53,14 @@ import optimization.tvnorm3d as tvn
 # 
 
 # In[5]:
-def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None):
+def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None, toprint=''):
     Nx, Ny, Nz = (12, 12, 12)#TODO: pasar
     Nb, Nc = M.shape
-    
+
     ## LR volumes
     Clr = c_lr
-    
+    print '%%%%%%%%%',toprint, id(Clr)    
+
     ## MAPL params
     #cvxChr = cvx.Constant(C_hr.reshape(-1, order='F'))
     
@@ -90,10 +91,8 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
             #fid_b = cvx.sum_squares((Gc*Chr_c+cvxInt_c) - Clr_c.T)
         else:
             fid_b = cvx.sum_squares(Gc*Chr_c - Clr_c)
-        
-        fidelity_list.append(fid_b)    
-    #cvxNc = cvx.Constant(Nc)
-    #cvxFidelityExp = cvx.inv_pos(cvxNc)*sum(fidelity_list)
+        fidelity_list.append(fid_b)
+    print '#fidelity_list', len(fidelity_list)
     cvxFidelityExp = sum(fidelity_list)
     
     ## Laplacian regularization
@@ -143,8 +142,9 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None)
     #obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1)
          
     # Constraints
+    constraints = []
     #constraints = [lamda > 0 , alpha > 0, beta > 0]
-    constraints = [cvxYhr >= 0]
+    #constraints.append(cvxYhr >= 0)
     #Agregar q M*C es positivo o deberia
 
     # Form and solve problem.
@@ -287,7 +287,7 @@ def solveMin_fitCosnt(subject,i,j,k, loader_func, G, intercept=None, scale=2, ma
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
 
-        definition_fun = lambda : define_problem_f1(
+        definition_fun = lambda toprint: define_problem_f1(
                                     c_lr,
                                     vhr,
                                     vlr,
@@ -295,7 +295,8 @@ def solveMin_fitCosnt(subject,i,j,k, loader_func, G, intercept=None, scale=2, ma
                                     M, U,tau,
                                     gtab,
                                     scale,
-                                    intercept=intercept)
+                                    intercept=intercept,
+                                    toprint=toprint)
     else:
         # Get input for the subject to fit
         i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, i,j,k,loader_func, bsize=BSIZE, scale=scale)
@@ -324,7 +325,7 @@ def solveMin_fitCosnt(subject,i,j,k, loader_func, G, intercept=None, scale=2, ma
     info = dict((key, []) for key in measures)
     seg = 0
 
-    print 'i_hr=', i_hr.shape
+   
     """ Sequencial"""
     res, A = try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose)
     info['mse'].append(res[0])
@@ -388,19 +389,20 @@ def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index,
         A = M.dot(C.reshape((Nx*Ny*Nz, Nc), order='F').T).T
         A = A.reshape((Nx, Ny, Nz, Nb), order='F')
 
-    mse = ((A-i_hr)**2).mean()
-    #info['mse'].append(mse)
-    print t3, 'mse=', mse
 
-    mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
+    _mse = ((A-i_hr)**2).mean()
+    #info['mse'].append(mse)
+    print t3, 'mse=', _mse, mse
+
+    _mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
     #info['mse1000'].append(mse1000)
-    print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', mse1000
+    print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', _mse1000
     #sys.stdout.flush()
 
-    mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
+    _mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
     #info['mse2000'].append(mse2000)
 
-    mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
+    _mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
     #info['mse3000'].append(mse3000)
 
 
@@ -411,9 +413,9 @@ def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index,
     print t3, '.'
 
     if res is not None:
-        res[i] = (mse, mse1000, mse2000, mse3000, seg)
+        res[i] = (_mse, _mse1000, _mse2000, _mse3000, seg)
 
-    return (mse, mse1000, mse2000, mse3000, seg), A
+    return (_mse, _mse1000, _mse2000, _mse3000, seg), A
 
 
 def indexs(a, val):
@@ -436,6 +438,7 @@ def params_for(subjects, i, j, k, sample_maker, bvals_needed=None, scale=2):
 
     G = dict((c,csr_matrix(regr[c].coef_)) for c in regr.keys())
 
+
     del(lr_samples)
     del(hr_samples)
     #gc.collect()
@@ -452,6 +455,7 @@ if IS_NEF :
     formula_to_use = sys.argv[2]
 else:
     formula_to_use = 'f1'
+
 FORMULA = formulas[formula_to_use]
 
 #bvals2000pos = [18, 27, 69, 75, 101, 107]
@@ -516,6 +520,7 @@ mse = np.zeros((RANGO), dtype='float32')
 mse1000 = np.zeros((RANGO), dtype='float32')
 mse2000 = np.zeros((RANGO), dtype='float32')
 mse3000 = np.zeros((RANGO), dtype='float32')
+
 
 
 subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
