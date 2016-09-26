@@ -326,7 +326,8 @@ def solveMin_fitCosnt(subject,i,j,k, loader_func, G, intercept=None, scale=2, ve
     seg = 0
    
     """ Sequencial"""
-    _mse, _mse1000, _mse2000, _mse3000, seg = try_value(i,j,k, i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
+    _mse, _mse1000, _mse2000, _mse3000, seg = try_value(i,j,k, i_hr, i_lr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
+    del(i_lr)
     info['mse'].append(_mse)
     info['mse1000'].append(_mse1000)
     info['mse2000'].append(_mse2000)
@@ -341,7 +342,7 @@ def solveMin_fitCosnt(subject,i,j,k, loader_func, G, intercept=None, scale=2, ve
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
     return None, None, seg, None, None, None, None, info
 
-def try_value(i,j,k, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters=1000, verbose=False, res=None):
+def try_value(i,j,k, i_hr, i_lr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters=1000, verbose=False, res=None):
     print '****before define problem for=', i, j, k, '    ',  datetime.datetime.now()
     prob = None
     prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun("")
@@ -356,23 +357,28 @@ def try_value(i,j,k, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000
     rounds = ROUNDS
     verbose = VERBOSE
     start_time = time.time()
-    for i in xrange(rounds):
-        print 'it=', i, 'of', rounds,'max_iters=', max_its
-        prob.solve(solver='SCS', max_iters=max_its, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
-        print t3, "--- status:", prob.status, "optimal value=", prob.value, 'i_hr:', i_hr.shape, datetime.datetime.now()
+    nonzero_percentage = np.count_nonzero(i_lr)/float(i_lr.size)
+    jump_it = nonzero_percentage < 0.5
+    print t3, '>>> nonzero_percentage =', nonzero_percentage
+    if not jump_it :
+        for i in xrange(rounds):
+            print 'it=', i, 'of', rounds,'max_iters=', max_its
+            prob.solve(solver='SCS', max_iters=max_its, eps=1.0e-05, verbose=verbose)  # Returns the optimal value.
+            print t3, "--- status:", prob.status, "optimal value=", prob.value, 'i_hr:', i_hr.shape, datetime.datetime.now()
 
-        if cvxFidelityExp is not None:
-            print t3, '>cvxFidelityExp', cvxFidelityExp.value
+            if cvxFidelityExp is not None:
+                print t3, '>cvxFidelityExp', cvxFidelityExp.value
 
-        if cvxLaplaceRegExp is not None:
-            print t3, '>cvxLaplaceRegExp', cvxLaplaceRegExp.value
+            if cvxLaplaceRegExp is not None:
+                print t3, '>cvxLaplaceRegExp', cvxLaplaceRegExp.value
 
-        if cvxNorm1 is not None:
-            print t3, '>cvxNorm1', cvxNorm1.value, datetime.datetime.now()
+            if cvxNorm1 is not None:
+                print t3, '>cvxNorm1', cvxNorm1.value, datetime.datetime.now()
 
-        sys.stdout.flush()
+            sys.stdout.flush()
 
-        pval_ant = prob.value
+            pval_ant = prob.value
+
     seg = time.time() - start_time
     minutes = int(seg / 60)
     print t3, "--- time of optimization : %d' %d'' (subject:%s, %s: %f) ---" % (minutes , seg%60, subject, name_parameter, val)
