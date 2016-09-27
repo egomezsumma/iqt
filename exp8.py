@@ -352,6 +352,11 @@ def try_bsize(subject, i, j, k, bsize, loader_func, G, intercept=None, scale=2, 
     """ Sequencial"""
     res, A, seg = try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose)
 
+    if group_number_job == fit_index_job and bsize == 55:
+        print '$$ saving original image of group', group_number_job, 'in', base_folder + 'i_hr_g%d' % (group_number_job)
+        np.save(base_folder + 'i_hr_g%d' % (group_number_job), i_hr)
+
+    del(i_hr)
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
     return A, seg, res
 
