@@ -562,8 +562,8 @@ for i, j, k in it:
                 mse3000[gi] = res['mse3000'][0]
 
                 if group_number_job == fit_index_job :
-                    print '$$ saving recontructed image of group', group_number_job, 'in', base_folder + 'A_g%d_sgroup%d'%(group_number_job,group_size)
-                    np.save(base_folder + 'A_g%d_sgroup%d'%(group_number_job,group_size), A)
+                    print '$$ saving recontructed image of group', group_number_job, 'in', base_folder + 'A_g%d_gsize%d'%(group_number_job,group_size)
+                    np.save(base_folder + 'A_g%d_gsize%d'%(group_number_job,group_size), A)
 
                 # La condicion es para guardarla sola una vez no importa la scala elegida en la original
                 if group_number_job == fit_index_job and gi == 0:
