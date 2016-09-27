@@ -384,20 +384,23 @@ def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index,
         A = M.dot(C.reshape((Nx*Ny*Nz, Nc), order='F').T).T
         A = A.reshape((Nx, Ny, Nz, Nb), order='F')
 
-    mse = ((A-i_hr)**2).mean()
+    _mse = ((A-i_hr)**2).mean()
     #info['mse'].append(mse)
     print t3, 'mse=', mse
 
-    mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
+    _mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
     #info['mse1000'].append(mse1000)
-    print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', mse1000
+    print t3, 'mse1000=', _mse1000
     #sys.stdout.flush()
 
-    mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
+    _mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
+    print t3, 'mse2000=', _mse2000
+
     #info['mse2000'].append(mse2000)
 
-    mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
+    _mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
     #info['mse3000'].append(mse3000)
+    print t3, 'mse1000=', _mse3000
 
 
     del (C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
@@ -407,9 +410,9 @@ def try_value(i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index,
     print t3, '.'
 
     if res is not None:
-        res[i] = (mse, mse1000, mse2000, mse3000, seg)
+        res[i] = (_mse, _mse1000, _mse2000, _mse3000, seg)
 
-    return (mse, mse1000, mse2000, mse3000, seg), A
+    return (_mse, _mse1000, _mse2000, _mse3000, seg), A
 
 
 def indexs(a, val):
