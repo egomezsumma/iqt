@@ -327,7 +327,7 @@ def solveMin_fitCosnt(subject,i,j,k, loader_func, G, intercept=None, scale=2, ve
    
     """ Sequencial"""
     _mse, _mse1000, _mse2000, _mse3000, seg = try_value(i,j,k, i_hr, i_lr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
-    del(i_lr)
+
     info['mse'].append(_mse)
     info['mse1000'].append(_mse1000)
     info['mse2000'].append(_mse2000)
@@ -360,6 +360,7 @@ def try_value(i,j,k, i_hr, i_lr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index,
     nonzero_percentage = np.count_nonzero(i_lr)/float(i_lr.size)
     jump_it = nonzero_percentage < 0.5
     print t3, '>>> nonzero_percentage =', nonzero_percentage
+    seg = 0
     if not jump_it :
         for i in xrange(rounds):
             print 'it=', i, 'of', rounds,'max_iters=', max_its
@@ -379,11 +380,11 @@ def try_value(i,j,k, i_hr, i_lr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index,
 
             pval_ant = prob.value
 
-    seg = time.time() - start_time
-    minutes = int(seg / 60)
-    print t3, "--- time of optimization : %d' %d'' (subject:%s, %s: %f) ---" % (minutes , seg%60, subject, name_parameter, val)
-    print t3, "--- status:", prob.status, "optimal value", prob.value ,np.abs(pval_ant-prob.value),  datetime.datetime.now()
-    #sys.stdout.flush()
+            seg = time.time() - start_time
+            minutes = int(seg / 60)
+            print t3, "--- time of optimization : %d' %d'' (subject:%s) ---" % (minutes , seg%60, subject)
+            print t3, "--- status:", prob.status, "optimal value", prob.value ,np.abs(pval_ant-prob.value),  datetime.datetime.now()
+            sys.stdout.flush()
 
     # Get result
     variables = dict( (v.name(), v) for v in prob.variables())
@@ -497,7 +498,6 @@ base_folder = RES_BASE_FOLDER + formula_to_use + '/'
 
 # Metrics to save
 
-mins_lamda   = []
 times        = []
 
 if IS_NEF :
@@ -583,8 +583,6 @@ for i, j, k in it:
             # Keeping the parameter value of each fitting that produce the min-mse (of all the val tested for the subjetc)
             index = np.argmin(np.array(res['mse']))
             print 'index del minimo:', index
-            min_lamda = rango[index]
-            mins_lamda.append(min_lamda)
 
             ## Para guardar info si se quiere
             #for key in res.keys():
@@ -598,17 +596,15 @@ for i, j, k in it:
                 del(prob, A, C, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
             del(res)
             del(seg)
-            print 'len(gc.garbage[:])', len(gc.garbage[:]),'number of unreachable objects found:', gc.collect()
 
         del(G, intercept)
-        #gc.collect()
+
 
 
 print 'Ultimos calculos', datetime.datetime.now()
 sys.stdout.flush()
 
 # Persist min vals
-pmins_lamda   = parray(base_folder + 'mins_mses.txt', mins_lamda)
 ptimes        = parray(base_folder +'times.txt',times)
 #poptimal_vals = parray(base_folder +'optimal_vals.txt', optimal_vals)
 
@@ -616,10 +612,6 @@ ptimes        = parray(base_folder +'times.txt',times)
 total_sec = np.array(times).sum()
 print ' === TOTAL TIME :',  str(int(total_sec//60))+"'", str(int(total_sec%60))+ '"' , datetime.datetime.now()
 sys.stdout.flush()
-
-# Persist results
-#if base_folder is not None: 
-#    np.save(base_folder+ 'mins_alphas', mins_lamda)
 
 
 name = '%d_%d_%d' % (RANGO, FITS, GROUPS)
@@ -634,17 +626,5 @@ print 'saved:', base_name%(2000)
 np.save(base_name%(3000), mse3000)
 print 'saved:', base_name%(3000)
 
-
-mins_lamda = np.array(mins_lamda)
-print 'Subjects fitted = ', mins_lamda.shape
-print 'mean=', mins_lamda.mean(),  mins_lamda
-#plt.bar(xrange(mins_lamda.size), mins_lamda)
-#plt.savefig(base_folder + '/mins_' + param_name + '.pdf')
-
-# In[11]:
-print 'rangos:', rango
-print 'mins_%s:' % (param_name) , mins_lamda
-
-#dict((v.name(), v.value) for v in prob.variables())
 print 'Lito!', datetime.datetime.now()
 sys.stdout.flush()
