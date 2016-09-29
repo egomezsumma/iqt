@@ -61,6 +61,36 @@ def get_img(subject, file_name, bsize=55, size=12, i=8, j=7, k=8):
         print 'LOADING', file_name
         return nib.load(file_name)
 
+
+# A diferencia de get_img indexa en el i,j,k que le pasas
+# no coinsidera la imagen como dividida en cubos
+def get_img_subvol(subject, file_name, bsize=55, size=10, i=96, j=84, k=96):
+    if IN_NEF:
+        src_name = NIFTY_FILE_NEF % (subject)
+        img = nib.load(src_name)
+
+        nx, ny, nz, nb = img.shape
+
+        x0, y0, z0 = int(i), int(j), int(k)
+        xf, yf, zf = x0 + size, y0 + size, z0 + size
+
+        bsize = nb if bsize < 0 else bsize
+
+        # Bval especifico
+        # data = np.asarray(img.dataobj[x0:xf, y0:yf, z0:zf, bvals])
+        # para todos y todas
+        data = np.asarray(img.dataobj[x0:xf, y0:yf, z0:zf, 0:bsize])
+
+        # print 'Final patch size:',  data.shape
+
+        nifti1img = nib.Nifti1Image(data, img.affine)
+        del (img)
+        return nifti1img
+    else:
+        print 'LOADING', file_name
+        return nib.load(file_name)
+
+
 def load_subject_medium(index, numbers, bval=None, bvalpos=None, base_folder='.'):
     subject = str(numbers[index])
 
@@ -155,6 +185,35 @@ def load_subject_medium_noS0(subject_number,i,j,k,bval=None, bvalpos=None, bsize
         file_name = folder + 'data_medium40g_12x12x12x40_' + subject + '.nii.gz'
         print 'Apunto de cargar patch ', subject
         img = get_img(subject, file_name, bsize=bsize, i=i,j=j,k=k)
+        bsize = img.shape[3]
+        bs = bvals[:bsize]
+        bvs = bvecs[:, :bsize]
+        idxs = __index_not_equals_to(bs, [0, 5])
+        gtab = gradient_table(bvals=bs[idxs], bvecs=bvs[:, idxs])
+    return img, gtab, idxs
+
+
+def load_subject_medium_noS0_subvol(subject_number,i,j,k,bval=None, bvalpos=None, bsize=55, base_folder='.'):
+    subject = str(subject_number)
+    folder = base_folder +'/HCP/' + subject + '/'
+
+    print '.Apunto de cargar bvals', subject
+    bvals = get_bvals(subject, folder)
+    print '.Apunto de cargar bvecs', subject
+    bvecs = get_bvecs(subject, folder)
+
+    if bvalpos is not None:
+        file_name = folder + 'data_medium40g_12x12x12x40_' + subject + '_b' + str(bval) + '.nii.gz'
+        img = get_img_subvol(subject, file_name, bsize=bsize, i=i,j=j,k=k)
+        bsize = min(len(bvalpos), img.shape[3])
+        bs = bvals[bvalpos[:bsize]]
+        bvs = bvecs[:, bvalpos[:bsize]]
+        idxs = __index_not_equals_to(bs, [0, 5])
+        gtab = gradient_table(bvals=bs[idxs], bvecs=bvs[:,idxs])
+    else:
+        file_name = folder + 'data_medium40g_12x12x12x40_' + subject + '.nii.gz'
+        print 'Apunto de cargar patch ', subject
+        img = get_img_subvol(subject, file_name, bsize=bsize, i=i,j=j,k=k)
         bsize = img.shape[3]
         bs = bvals[:bsize]
         bvs = bvecs[:, :bsize]

@@ -28,8 +28,31 @@ def get_sample_dwi(subject_number,i,j,k, loader_func, bval=None, bvalpos=None,bs
     s0_idxs = [i for i in xrange(max(idxs) + 1) if i not in idxs]
     return data_noS0, lr[:, :, :, idxs], data[:, :, :, s0_idxs], lr[:, :, :, s0_idxs], gtab
 
-def mm(A):
-    return A.min(), A.max()
+def get_sample_dwi_pixel(subject_number,i,j,k, loader_func, bval=None, bvalpos=None, bsize=55, scale=2):
+    """
+    Idem get_sample_dwi pero el patch HR devuelto es solo el pixel del centro
+    :return: Hr, Lr, S0Hr, S0Lr, gtab
+    """
+    # Load Hcp subject
+    print 'bsize=', bsize
+    img, gtab, idxs = loader_func(subject_number,i,j,k, bval, bvalpos, bsize=bsize)
+    # Downsample data
+    lr, _ = img_utils.downsampling(img, scale)
+
+    data = img.get_data()
+    data_noS0 = data[:, :, :, idxs]
+    s0_idxs = [i for i in xrange(max(idxs) + 1) if i not in idxs]
+    data_S0 = data[:, :, :, s0_idxs]
+
+    # Patch must be a cube
+    center_s = int((data_S0.shape[0]/scale)/2)*scale
+    size_pixel = int(data_S0.shape[0]/lr.shape[0])
+    hr_noSO = data_noS0[center_s:center_s+size_pixel, center_s:center_s+size_pixel, center_s:center_s+size_pixel, :]
+    hr_S0 = data_S0[center_s:center_s + size_pixel, center_s:center_s + size_pixel, center_s:center_s + size_pixel, :]
+    print 'scale=', scale, 'lr.shape=', lr.shape, 'hr.shape=', hr_noSO.shape
+
+    return hr_noSO, lr[:, :, :, idxs], hr_S0, lr[:, :, :, s0_idxs], gtab
+
 
 def get_sample_of_dwi(subject_number, i,j,k, loader_func, bval=None, bvalpos=None, bsize=-1, scale=2):
     hr, lr, S0hr, S0lr, gtab = get_sample_dwi(subject_number,i,j,k, loader_func, bval=None, bvalpos=None, bsize=bsize, scale=scale)
@@ -67,11 +90,42 @@ def get_sample_of_mapl(subject_number, i, j, k, loader_func, bval=None, bvalpos=
     return C_hr, c_lr, gtab, hr, lr
 
 
+def get_sample_of_mapl_pixel(subject_number, i, j, k, loader_func, bval=None, bvalpos=None, bsize=55, scale=2, multiply_S0=False):
+    hr, lr, S0hr, S0lr, gtab = get_sample_dwi_pixel(subject_number, i,j,k, loader_func, bval=bval, bvalpos=bvalpos, bsize=bsize, scale=scale)
+    print 'hr:', hr.shape, 'lr:', lr.shape
+
+    hr = get_atenuation(hr, S0hr, 'hr'+str(subject_number))
+    lr = get_atenuation(lr, S0lr, 'lr'+str(subject_number))
+
+
+    # Calculate MAPL  C_hr:(Nx,Ny,Nz,Nc) c_lr:(nx,ny,nz,nc)
+    C_hr = mapl.getC(hr, gtab, radial_order=4)
+    c_lr = mapl.getC(lr, gtab, radial_order=4)
+
+    # Multiply by S0 to get the signal (and not the atenuation)
+    if multiply_S0:
+        C_hr = get_signal(C_hr, S0hr)
+        c_lr = get_signal(c_lr, S0lr)
+
+    # Clean-up
+    #del (hr)
+    #del (lr)
+    del (S0hr)
+    del (S0lr)
+    print 'hr:', mm(hr), 'lr:', mm(lr)
+    return C_hr, c_lr, gtab, hr, lr
+
+
 def get_sample_maker_of_map(loader_func, bval=None, bvalpos=None, bsize=-1):
     return lambda subject_num, i, j ,k, scale : get_sample_of_mapl(subject_num, i, j ,k , loader_func, bval, bvalpos, bsize=bsize, scale=scale)
 
 def get_sample_maker_of_dwi(loader_func, bval=None, bvalpos=None, bsize=-1):
     return lambda subject_num, i, j ,k, scale : get_sample_of_dwi(subject_num, i, j ,k , loader_func, bval, bvalpos, bsize=bsize, scale=scale)
+
+
+def get_sample_maker_of_map_pixel(loader_func, bval=None, bvalpos=None, bsize=-1):
+    return lambda subject_num, i, j ,k, scale : get_sample_of_mapl_pixel(subject_num, i, j ,k , loader_func, bval, bvalpos, bsize=bsize, scale=scale)
+
 
 
 def buildT(sample_getter, n_samples):
@@ -194,3 +248,7 @@ def get_signal(Eq, S0):
 
     ## Example of use
     # buildT(get_sample_maker(numbers, scale), n_samples)
+
+
+def mm(A):
+    return A.min(), A.max()
