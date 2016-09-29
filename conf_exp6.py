@@ -44,7 +44,7 @@ else:
 
 
 FITS =10#11
-GROUP_SIZE=5
+GROUP_SIZE=8
 
 INTERCEPT=False
 
