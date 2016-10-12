@@ -54,8 +54,9 @@ import optimization.tvnorm3d as tvn
 
 # In[5]:
 def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None, toprint=''):
-    Nx, Ny, Nz = (5, 5, 5)#TODO: pasar
+    Nx, Ny, Nz = (2, 2, 2)#TODO: pasar
     Nb, Nc = M.shape
+
 
     ## LR volumes
     Clr = c_lr
@@ -94,7 +95,7 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None,
         fidelity_list.append(fid_b)
     print '#fidelity_list', len(fidelity_list)
     cvxFidelityExp = sum(fidelity_list)
-    
+
     ## Laplacian regularization
     cvxU = cvx.Constant(U)
     regLaplade_list = []
@@ -106,9 +107,10 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None,
     
     
     ## 3D Tv-Norm Regularization
+    cvxM = cvx.Constant(M)
     cvxC_byCoef = cvx.reshape(cvxChr, vhr, Nc)
     # (Nb,Nc)*(Nc,vhr) = (Nb, vhr).T = (vhr, Nb) 
-    cvxYhr = cvx.reshape((M*cvxC_byCoef.T).T, vhr*Nb, 1)
+    cvxYhr = cvx.reshape((cvxM*cvxC_byCoef.T).T, vhr*Nb, 1)
     print 'defining cvx3DTvNomExp', cvxYhr.size,Nx, Ny, Nz, Nb
     cvx3DTvNomExp = tvn.tv3d(cvxYhr, Nx, Ny, Nz, Nb)
     
@@ -162,7 +164,6 @@ def find_closest_b(b, list_of_bs):
     return closest
 
 
-# def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None):
 def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=None):
     Nb, Nc = M.shape
     Nx, Ny, Nz, bval = i_hr_shape
@@ -344,69 +345,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
     return None, None, seg, None, None, None, None, info
 
-    """Multiprocess
-
-    params = [(name_parameter, val,i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose) for val in the_range]
-    all_together = None
-    long = len(the_range)
-    p = Pool(long)
-    all_together = p.map(try_value, params)
-    for i in xrange(len(the_range)):
-        res = all_together[i]
-        info['mse'].append(res[0])
-        info['mse1000'].append(res[1])
-        info['mse2000'].append(res[2])
-        info['mse3000'].append(res[3])
-        seg += res[4]
-    print t3, 'fin fit al values for subject:', subject, 'segs:', seg, datetime.datetime.now()
-    # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
-    return None, None, seg, None, None, None, None, info
-    """
-    """Multithreads
-
-    threads = [None]*len(the_range)
-    results = [(None, None, None, None)]*len(the_range)
-
-    params = [
-        (name_parameter, the_range[i], i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose, i, results)
-        for i in xrange(len(the_range))]
-
-    print 'Antes de crear threads'
-    for i in xrange(len(params)):
-        t = Thread(target=try_value, args=params[i])
-        threads[i] = t
-        print 'starting job', i , 'with val=', the_range[i]
-        t.start()
-
-    print 'A esperar que terminen'
-    some_one_is_alive = True
-    while some_one_is_alive :
-        ala = 1*2
-        some_one_is_alive = False
-        for i in range(len(params)):
-            if threads[i].isAlive():
-                some_one_is_alive = True
-                break
-
-    for i in range(len(params)):
-        print 'joining thread ', i, ' with val=', the_range[i]
-        threads[i].join()
-
-    print 'antes de unir resultados'
-    print results
-    for i in xrange(len(the_range)):
-        res = results[i]
-        info['mse'].append(res[0])
-        info['mse1000'].append(res[1])
-        info['mse2000'].append(res[2])
-        info['mse3000'].append(res[3])
-        seg += res[4]
-
-    print t3, 'End of fit all values for subject:', subject, 'segs:', seg, datetime.datetime.now()
-    sys.stdout.flush()
-    # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
-    return None, None, seg, None, None, None, None, info
-    """
+    
 def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters=1000, verbose=False, res=None):
     print '****before define problem val=', val, '    ',  datetime.datetime.now()
     prob = None

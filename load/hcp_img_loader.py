@@ -59,7 +59,8 @@ def get_img(subject, file_name, bsize=55, size=12, i=8, j=7, k=8):
         return nifti1img
     else:
         print 'LOADING', file_name
-        return nib.load(file_name)
+        nibimg = nib.load(file_name)
+        return nibimg
 
 
 # A diferencia de get_img indexa en el i,j,k que le pasas
@@ -79,7 +80,7 @@ def get_img_subvol(subject, file_name, bsize=55, size=10, i=96, j=84, k=96):
         # Bval especifico
         # data = np.asarray(img.dataobj[x0:xf, y0:yf, z0:zf, bvals])
         # para todos y todas
-        data = np.asarray(img.dataobj[x0:xf, y0:yf, z0:zf, 0:bsize])
+        data = np.asarray(img.dataobj[x0:xf, y0:yf, z0:zf, 0:bsize], dtype='float32')
 
         # print 'Final patch size:',  data.shape
 
@@ -88,7 +89,11 @@ def get_img_subvol(subject, file_name, bsize=55, size=10, i=96, j=84, k=96):
         return nifti1img
     else:
         print 'LOADING', file_name
-        return nib.load(file_name)
+        nibimg = nib.load(file_name)
+        data = np.asarray(nibimg.dataobj[40:50, 50:60, 30:40,:40], dtype='float32')
+        nifti1img = nib.Nifti1Image(data,  nibimg.affine)
+        del(nibimg)
+        return nifti1img
 
 
 def load_subject_medium(index, numbers, bval=None, bvalpos=None, base_folder='.'):
