@@ -1,0 +1,295 @@
+= En maquina de Inria ================================================================
+
+1)Install anaconda python 2.7  https://www.continuum.io/downloads
+   Download the installer.
+   In your terminal window type one of the below and follow the instructions:
+   bash Anaconda2-4.0.0-Linux-x86_64.sh
+   
+   Anaconda2 will now be installed into this location:
+   /user/lgomez/home/anaconda2
+
+2) pip install dipy
+
+3) conda install vtk
+
+2) hacer tuto "An introduction to the Deterministic Maximum Direction Getter"
+   http://nipy.org/dipy/examples_built/deterministic_fiber_tracking.html#example-deterministic-fiber-tracking
+
+4) Install medley (https://www.mendeley.com/download-mendeley-desktop/linux32/instructions/)
+   1. Open the downloaded archive
+   2. Extract the contents to any folder
+   3. Run the application
+      Within the extracted folder, open a terminal and run the following command:
+      ./bin/mendeleydesktop
+      
+= Info =============================================================================================================
+
+Numpy indexin
+http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+
+jBE=9r%Aa
+pass:Elefante10**
+
+https://www-sop.inria.fr/semir/index.php/services-de-a-a-z/26-backup
+
+====================================================================================================================
+= PREGUNTAS RESPUESTAS =============================================================================================
+====================================================================================================================
+
+1. Que son los S0 volumes ? 
+   Rta: Imagenes T2 o T1, osea sin la magia para ver la difusion
+
+
+4. Que son los brain mask o para que cirven?
+   Rta: Matrices de ceros y unos (o trues y false) utiles para segmentar alguna ROI del cerebro en este caso.
+        La ROI puede ser todo el cerebro (sacar el fondo) o el CC (cuerpo calloso), etc
+
+
+5. Que es imagen b0 ? http://www.diffusion-imaging.com/2013/02/why-do-we-acquire-b0-images-in-dti-exams.html
+   Rta: Es la imagen T2 (o T1). Es la imagen anatomica del cerebro que no incluye informacion sobre la disfusion de los spines de los nucleos de Hidrogeno.
+
+
+6. Que guardan los archivos .nii (NIfTI is a new Analyze-style data format)?
+   Rta: formato de archivos que guardan la info pertinente a coleciones de datos dMRI (difusiion weight data, b-values, b-vectores, FA, Senial de atenuacion, etc)
+   
+   
+7. Para q sirve la matrix affine ('homogenous affine giving relationship between voxel coordinates and world coordinates')
+   Rta:
+   * Existe una representacion que se basa en distancia a un cierto origen, que seria continua. Esta se le llama MNI-Space y se mide en milimetros o lo que fuera. Existe otra representacion de los mismo pero discreta conocida como ArrayVoxelCoordenates. La matriz affine es una matriz que la tiene que dar el que saco las imagenes para poder ir de un mundo al otro. Dicha matriz es una transformacion lineal.
+
+
+12. isotropic voxel size. -> mala semantica, sera un voxel en el cual la medicion de FA es muy baja
+
+
+14. Desambiguar csd constraint sphere deconvolution
+    Rta: Son tecnicas para modelar el cruce de dos o mas bundles de axones. Son conceptos hermanos con 3dShore, Map/Mri. Como son los axones dentro de un voxel.
+
+
+16. the real Ensemble Average Propagator (EAP)
+    Rta: Es la distruibucion que dado un desplazamiento (direccion+longuitud=desplazamiento) te dice la probabilidad deque un conjunto de spines se hallan desplazado esa cantidad en un tiempo t ( que es el timepo del experimento de difusion, se hace algo se espera t desde ese punto en el tiempo y se muestrea/midea algo)
+
+
+++++
+
+20. Que es un "q-space imaging methods" "q-space signal"  // q-shell // q-ball imagin
+15  Que significa que la data fue obtenida de 2 shells ("acquired for two shells at b-values 1500 and 2500.")
+24. Que quieren decir q es la clase de modelos de HARDI, pense q hardi se le llama a los datos no a un modelo.
+        """Q-ball belongs to the class of high angular resolution diffusion imaging
+           (HARDI) models that aim at solving the partial voluming problem
+           due to the existence of several putative populations of fibres within
+           a voxel."""
+    Rta:
+    * Mal uso de la semantica. HARDI se refire a muestras de dMRI tomadas con por lo menos mas de 60 direcciones de gradientes diferentes. Hay modelos como por ejemplo DTI que solo hacen uso de 6 direcciones nomas y otros modelos que talvez usan todas o muchas o n (osea que es parametro de ese modelo). Tal vez sea ahi donde radiaca lo que quieren decir con modelos de la clase HARDI.
+    * Q-ball es en el espacio definido por q=G*\gamma*t definimos una esfera (solo su cascara) discreta, eso nos daria varios valores de q osea {q0,q1,q2....qn}. Listo ahora midamos la senial para esos ene qus. Otra forma de llamarlo a esa esfera discreta de puntos de q, es shell. Multi shel se estaria refieriendo a muchas esferas (tdas centradas en un mismo origen y una mas grande que otras). La unidad de q es 1/distancia, con lo cual a menor q mayor es la distancia medida ( la probabilidad de q se desplacen el conjunto de espines)
+    
+    
+14. que es fODF 'fiber orientation distribution funcion' es un array un numero una funcion?
+23. Como son los modelos basados en ODF. Osea no entiendo que tipo de dato es la respuesta de estos modelos y porque ademas de los datos de la atenuacion de la senial toman una esfera get_sphere('symmetric724'). Se q es la projecion radial de la fundion de difusion pero no entiendo bien
+25. EAP versus ODF (en la tesis de descoteaux y rachid estan mas a favor del eap)
+ -> 
+     Rta:
+     * La eap es la probabilidad que un conjunto de spines se desplace en cierto desplazamiento (direccion+longitud). La odf es la probabilidad que un conjunto de spines se desplace en cierta direccion (longitud=1 o constante). Se relacion de la siguiente manera:
+     * Ej: la ODF con direcion 'hacia-el-norte' es la suma/promedio/integral de la EAP hacia-el-norte : 1paso, 2pasos , ... 
+     
+       ODF(d^, t) = E{ EAP(r*d^,t) }
+                  = \integral{r} ( EAP(r*d^, t)*EAP(r, d^*t) )
+     
+     E{} : esperanza o marginalizacion
+     r : Reales (R)
+     d^: { v : RxRxR | |v| = 1 } 
+     t : Tiempo de aplicacion del gradiente de difusion (no Dsl, no Dfe ni Gv){valor dado, no aleatorio}
+ 
+     * Los que usan ODF, dicen "ok" no tomemos encuenta la longuitud del desplazamiento     
+     
+     * Dato: Los desplazamientos los asumimos simetricos antipodalmente, es decir EAP(X,t) = EAP(-X,t)
+ 
+27. que es la return to origin probability?
+    Rta: 
+    * Es la probabilidad de que un conjunto de espines cuando se los midan (luego de haber hecho un recorrido) justo pasen por el lugar de donde salieron (osea calculo que 'salieron' se refiere a cuando se le aplico el gradiente por un tiempo t y luego se midio x donde andaban = en el mismo lugar por donde salieron)
+    * Analogia del borracho: Si pongo un borracho en el centro de una habitacion y no lo miro por un rato la probabilidad de que cuadno lo mire este de nuevo en el centro (los borrachos no se quedan quietos) es mayor cuanto mas pequenia sea la habitacion.
+    
+    
+    
+30. Que es la response_function ( devuelve un vector 3d y un escalar ) y para q sirve (tipo etc) , esa que prescizan los modelos sfm (sparse fasiccle model) y CSD (constrained spherical deconvolution)
+ ej en dipy:
+     from dipy.reconst.csdeconv import auto_response
+     response, ratio = auto_response(gtab, data, roi_radius=10, fa_thr=0.7)
+
+     "Returns
+    -------
+    response : tuple, (2,)
+        (`evals`, `S0`)
+    ratio : float
+        The ratio between smallest versus largest eigenvalue of the response.
+    number of voxels : int (optional)
+        The number of voxels used for estimating the response function.
+    Notes
+    -----
+    In CSD there is an important pre-processing step: the estimation of the
+    fiber response function. In order to do this we look for voxels with very
+    anisotropic configurations. For example we can use an ROI (20x20x20) at
+    the center of the volume and store the signal values for the voxels with
+    FA values higher than 0.7. Of course, if we haven't precalculated FA we
+    need to fit a Tensor model to the datasets. Which is what we do in this
+    function.
+    For the response we also need to find the average S0 in the ROI. This is
+    possible using `gtab.b0s_mask()` we can find all the S0 volumes (which
+    correspond to b-values equal 0) in the dataset.
+    The `response` consists always of a prolate tensor created by averaging
+    the highest and second highest eigenvalues in the ROI with FA higher than
+    threshold. We also include the average S0s.
+    We also return the `ratio` which is used for the SDT models. If requested,
+    the number of voxels used for estimating the response function is also
+    returned, which can be used to judge the fidelity of the response function.
+    As a rule of thumb, at least 300 voxels should be used to estimate a good
+    response function (see [1]_).
+    References
+    ----------
+    .. [1] Tournier, J.D., et al. NeuroImage 2004. Direct estimation of the
+    fiber orientation density function from diffusion-weighted MRI
+    data using spherical deconvolution http://www.sciencedirect.com/science/article/pii/S1053811904004100
+    """
+   Rta: 
+   * response: Auto-valores por voxel
+   * ratio: el promedio de S0. Promedio porque suele pasar que se toman varias S0 y se promedian por cuestiones de ruido, etc.
+
+
+31. Que son los shm_coeff que se le pasa siempre al direction getter.???
+   Rta: son los coeficionets que fitea el metodo SHORE
+
+
+
+
+====================================================================================================================
+= PREGUNTAS: =======================================================================================================
+====================================================================================================================
+
+2. Cargamos uno de los datasets disponibles con 150 gradientes en la esfera de 10 b0s -> a q se refiere
+
+8. a q se refiere con "in the fourth dimension of the DWI dataset"
+
+9. que es un CSF voxel. -> un pixel en 3d de una parte del cerebro llamada CSF
+
+10. GRAPPA es un algo de recosntruccion de que?
+
+11. q es una GE acquisition?
+
+17. what is hese bases capture the radial and angular properties of the dMRI??
+
+18. que es un SHORE scalar map? (Simple Harmonic Oscillator based Reconstruction and Estimation)
+
+19. para que se usan las esferitas "symmetric724"
+
+++++++1
+
+26. que es el hydi(hybrid dMRI imagin) data procesing 
+
+28. Porq algunos modelos precisan una esferita en dipy
+ 
+29. En el papper canales2010 hay una operacion matematica llamada convolucion q es??http://www.sciencedirect.com/science/article/pii/S105381190901252X
+     
+31. However we can fit the ODF of any model to the spherical harmonic basis using the peaks_from_model function.
+ 
+++++++2
+
+32. No entido el sig estracto de el abstract del papper [tourier 2004] 
+" The diffusion-weighted signal attenuation measured over the surface of a sphere can then be expressed as the convolution over the sphere of a response function (the diffusion-weighted attenuation profile for a typical fiber bundle) with the fiber orientation density function (ODF). " http://www.sciencedirect.com/science/article/pii/S1053811904004100
+
+
+33. tengo una img la downsampleo (img.get_data()) pero el dti fit usa la gtable. como downsampleo la gtable)
+34. no encuentro los 6 parametros q calcula el dti en la libreria dipy
+    +-> x.model_params = [--evals--,--evec1--,--evec2--,--evec3--] #12 valores
+35. nose como hacer la inversa de dti(dxx, dyy...) -> E(q)
+    +-> creo q tenfit[x][y][z].predict(gtab) --> una array con cuanto seria en cada b-value para ese voxel
+                                                (se puede hacer con el volumne entero)
+           
+    
+#######################################################
+#########
+
+
+778  cd /home/lgomez/Documents/tesis/latex
+  779  clear
+  780  cd /home/lgomez/Documents/tesis/experimento1
+  781  clear
+  782  cd /tmp/mozilla_lgomez0
+  783  clear
+  784  cd /user/lgomez/home/Documents/tesis/optimizacion
+  785  clear
+  786  cd /home/lgomez/Documents/tesis/optimizacion
+  787  clear
+  788  python
+  789  gs
+  790  cd 
+  791  cd Documents/tesis/latex/
+  792  gs
+  793  ga tesis.tex
+  794  gm -m "siguiendo con las correcciones de demina (hasta la parte de modelos)"
+  795  export ATLAS="/usr/lib/atlas-base/libatlas.so"
+  796  cd /usr/lib/atlas-base
+  797  iqt
+  798  pip install seaborn
+  799  ls
+  800  gs
+  801  cd ..
+  802  ls
+  803  cd 
+  804  cd Documents/
+  805  ls
+  806  cd tesis/
+  807  ls
+  808  gs
+  809  ga optimizacion/
+  810  gs
+  811  gm -m 'primer intento de formular gradiente de optimizacion'
+  812  gs
+  813  ga optimizacion/optimizacion.tex
+  814  ga optimizacion/optimizacion.pdf 
+  815  gs
+  816  gm -m 'pasando a usar el cuadrado de la norma'
+  817  pip install from cvxpy import *
+  818  import numpy
+  819  pip install cvxpy
+  820          pip install --user cvxpy
+  821  cd
+  822  cd apps/
+  823  mkdir cvxpy
+  824  cd cvxpy/
+  825  conda create -n cvxpy-env python=2.7 numpy=1.8 scipy=0.14 cvxopt pip nose
+  826  source activate cvxpy-env
+  827  sudo apt-get install libatlas-base-dev gfortran
+  828  sudo yum install libatlas-base-dev gfortran
+  829  pip install cvxpy
+  830  jupiter notebook
+  831  pip install dipy
+  832  conda install vtk
+  833  jupyter nootebook
+  834  ls
+  835  bash Anaconda2-4.0.0-Linux-x86_64.sh 
+  836  jupyter nootebook
+  837  ./anaconda2/bin/jupyter nootebook
+  838  ./anaconda2/bin/jupyter notebook
+  839  pip install cvxpy
+  840  jupyter nootebook
+  841  jupyter notebook
+  842  bg
+  843  which jupyter
+  844  conda
+  845  conda install cxvpy
+  846  anaconda search -t conda cxvpy
+  847  anaconda search -t conda cvxpy
+  848  conda install -t cvxgrp cvxpy
+  849  conda install cvxgrp/cvxpy
+  850  conda install omnia/cvxpy
+  851  conda install -h
+  852  conda -t omnia install cvxpy
+  853  anaconda search -t conda cvxpy
+  854  conda install omnia/cvxpy
+  855  conda install -c omnia cvxpy
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+
+
+
+

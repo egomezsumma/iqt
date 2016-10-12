@@ -1,0 +1,111 @@
+bash-4.3$ ssh lgomez@nef-frontal
+bash-4.3$ cd /data/athena/share/HCP
+
+cd /data/athena/share/HCP/100307/T1w/Diffusion > bvals, bvecs, data.nii.gz
+
+cd /data/athena/share/HCP/100307/T1w/ > T1w_*_restored.nii -- T1
+
+
+scp lgomez@nef-devel:<archivo_remoto> <archivo_local>
+
+! scp lgomez@nef-devel:<archivo_remoto> <archivo_local>
+
+
+ssh lgomez@nef-frontal.inria.fr 
+
+/data/athena/share/HCP/100307/
+ +MNINonLinear  
+ +release-notes  
+ +T1w
+   +Diffusion
+      +bvals  
+      +bvecs  
+      +data.nii.gz  
+      +grad_dev.nii.gz  
+      +nodif_brain_mask.nii.gz
+
+
+# Carpeta
+/data/athena/share/HCP/100307/T1w/Diffusion
+# Nifty file
+/data/athena/share/HCP/100307/T1w/Diffusion/data.nii.gz 
+
+
+## Para recortar una imagen (desde la misma carpeta donde se encuentre)
+/home/ggallard/apps/conda2/bin/ipython2
+
+%cpaste
+
+import nibabel as nib
+import numpy as np
+img = nib.load('./data.nii.gz');
+size=12
+nx, ny, nz, nb = img.shape
+x0, y0, z0 = int(nx*0.65), int(ny*0.5), int(nz*0.65)
+xf, yf, zf = x0+size,y0+size, z0+size 
+data = np.asarray(img.dataobj[x0:xf, y0:yf, z0:zf, 0:6])
+
+nifti1img = nib.Nifti1Image(data, img.affine)
+nib.save(nifti1img,'./data_small_12x12x12x6.nii.gz')
+
+
+## LO MISMO PERO VARIOS
+
+
+
+import nibabel as nib
+import numpy as np
+
+prefix = '/data/athena/share/HCP/'
+numbers = [100307, 100408, 180129,180432, 180836, 180937]
+suffix= '/T1w/Diffusion/data.nii.gz'
+
+size=12
+bsize = 6
+
+dest_pre = '/home/lgomez/small_brains/data_small_'+str(size)+'x'+str(size)+'x'+str(size)+'x'+str(bsize)+'_'
+dest_suf = '.nii.gz'
+
+
+for subject in numbers:
+    src_name = prefix+str(subject)+suffix
+    img = nib.load(src_name);
+
+    nx, ny, nz, nb = img.shape
+    x0, y0, z0 = int(nx*0.65), int(ny*0.5), int(nz*0.65)
+    xf, yf, zf = x0+size,y0+size, z0+size 
+    data = np.asarray(img.dataobj[x0:xf, y0:yf, z0:zf, 0:bsize])
+
+    
+    nifti1img = nib.Nifti1Image(data, img.affine)
+    dest_name = dest_pre+str(subject)+dest_suf 
+    nib.save(nifti1img, dest_name)
+    print subject, ':', img.shape, '-->', data.shape, 'saved in: ', dest_name
+    print 
+
+## Luego para descargar (parase donde esta las carpeta de los sujetos)
+
+scp lgomez@nef-frontal.inria.fr:/home/lgomez/small_brains/data_small_12x12x12x6_100307.nii.gz ./100307/
+scp lgomez@nef-frontal.inria.fr:/home/lgomez/small_brains/data_small_12x12x12x6_100408.nii.gz ./100408/
+scp lgomez@nef-frontal.inria.fr:/home/lgomez/small_brains/data_small_12x12x12x6_180129.nii.gz ./180129/
+scp lgomez@nef-frontal.inria.fr:/home/lgomez/small_brains/data_small_12x12x12x6_180432.nii.gz ./180432/
+scp lgomez@nef-frontal.inria.fr:/home/lgomez/small_brains/data_small_12x12x12x6_180836.nii.gz ./180836/
+scp lgomez@nef-frontal.inria.fr:/home/lgomez/small_brains/data_small_12x12x12x6_180937.nii.gz ./180937/
+
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/100307/T1w/Diffusion/bvecs ./100307/bvecs_100307
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/100408/T1w/Diffusion/bvecs ./100408/bvecs_100408
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/180129/T1w/Diffusion/bvecs ./180129/bvecs_180129
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/180432/T1w/Diffusion/bvecs ./180432/bvecs_180432
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/180836/T1w/Diffusion/bvecs ./180836/bvecs_180836
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/180937/T1w/Diffusion/bvecs ./180937/bvecs_180937
+
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/100307/T1w/Diffusion/bvals ./100307/bvals_100307
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/100408/T1w/Diffusion/bvals ./100408/bvals_100408
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/180129/T1w/Diffusion/bvals ./180129/bvals_180129
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/180432/T1w/Diffusion/bvals ./180432/bvals_180432
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/180836/T1w/Diffusion/bvals ./180836/bvals_180836
+scp lgomez@nef-frontal.inria.fr:/data/athena/share/HCP/180937/T1w/Diffusion/bvals ./180937/bvals_180937
+
+
+
+
