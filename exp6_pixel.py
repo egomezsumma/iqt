@@ -9,6 +9,7 @@ import load.samples as samples
 import sys
 #import gc
 import datetime
+from utils.persistance.ResultManager import ResultManager
 
 #from threading import Thread, Lock
 #from multiprocessing import Pool
@@ -338,8 +339,8 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     print 'info[mse]', info['mse']
 
     if group_number_job == fit_index_job:
-        print '$$ saving original image of group', group_number_job, 'in', base_folder + 'i_hr_g%d' % (group_number_job)
-        np.save(base_folder + 'i_hr_g%d' % (group_number_job), i_hr)
+        print '$$ saving original image of group', group_number_job, 'in', rm.get_dir() + 'i_hr_g%d' % (group_number_job)
+        np.save(rm.get_dir() + 'i_hr_g%d' % (group_number_job), i_hr)
 
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
@@ -418,8 +419,8 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
 
 
     if group_number_job == fit_index_job:
-        print '$$ saving recontructed image of group', group_number_job, 'in', base_folder + 'A_g%d_val%d' % (group_number_job, val)
-        np.save(base_folder + 'A_g%d_val%d' % (group_number_job, val), A)
+        print '$$ saving recontructed image of group', group_number_job, 'in', rm.get_dir() + 'A_g%d_val%d' % (group_number_job, val)
+        np.save(rm.get_dir() + 'A_g%d_val%d' % (group_number_job, val), A)
 
     del (A, C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
     print t3, '.', datetime.datetime.now()
@@ -461,7 +462,12 @@ def params_for(subjects, i, j, k, sample_maker, bvals_needed=None):
     return G, intercept
     
 from conf_exp6_pixel import *
-RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp6pixel/'
+#
+
+if IS_NEF :
+    RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/'
+else:
+    RES_BASE_FOLDER = '/home/leexgo1987/Documentos/cs/inria/iqt/results'
 
 # ## Solving the problem and cross-validation (leave one out)
 
@@ -493,10 +499,7 @@ else:
 name_parameter = param_name
 rango = params_range[param_name]
 
-base_folder = RES_BASE_FOLDER + formula_to_use + '/' + param_name + '/'
-
 # Metrics to save
-
 mins_lamda   = []
 times        = []
 
@@ -510,6 +513,24 @@ if IS_NEF :
 else:
     fit_index_job = 0
 
+if IS_NEF :
+    id_job = int(sys.argv[5])
+else:
+    id_job = 1234
+
+exp_name = 'exp6pixel'
+rm = ResultManager(RES_BASE_FOLDER  , 
+                exp_name + '/' + formula_to_use + '/' + param_name,  
+                id_job)
+
+rm.add_data('params_range', dict((x[0], list(x[1])) for x in params_range.items()))
+rm.add_data('name_parameter', name_parameter)
+rm.add_data('formula', formula_to_use)
+rm.add_data('scale', SCALE)
+rm.add_data('intercept', INTERCEPT)
+rm.add_data('max_its', MAXIT_BY_ROUND)
+rm.add_data('rounds', ROUNDS)
+
 
 print 'STARTING JOB FOR', param_name, 'USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
 print 'WITH RANGE:', rango
@@ -517,9 +538,11 @@ print 'Intercept:', str(INTERCEPT)
 sys.stdout.flush()
 
 
-
 GROUPS = n_samples/GROUP_SIZE
 RANGO= len(rango)
+
+rm.add_data('n_samples', n_samples)
+rm.save()
 
 """
 mse = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
@@ -531,7 +554,6 @@ mse = np.zeros((RANGO), dtype='float32')
 mse1000 = np.zeros((RANGO), dtype='float32')
 mse2000 = np.zeros((RANGO), dtype='float32')
 mse3000 = np.zeros((RANGO), dtype='float32')
-
 
 
 subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
@@ -604,12 +626,13 @@ for i, j, k in it:
         #gc.collect()
 
 
+
 print 'Ultimos calculos', datetime.datetime.now()
 sys.stdout.flush()
 
 # Persist min vals
-pmins_lamda   = parray(base_folder + 'mins_mses.txt', mins_lamda)
-ptimes        = parray(base_folder +'times.txt',times)
+pmins_lamda   = parray(rm.get_dir() + 'mins_mses.txt', mins_lamda)
+ptimes        = parray(rm.get_dir() + 'times.txt',times)
 #poptimal_vals = parray(base_folder +'optimal_vals.txt', optimal_vals)
 
 # Log spended time
@@ -623,10 +646,10 @@ sys.stdout.flush()
 
 
 name = '%d_%d_%d' % (RANGO, FITS, GROUPS)
-base_name = base_folder + 'mse_g'+ str(group_number_job) +'_f'+str(fit_index_job)
+base_name = rm.get_dir() + 'mse_g'+ str(group_number_job) +'_f'+str(fit_index_job)
 np.save(base_name, mse)
 print 'saved:', base_name
-base_name = base_folder + 'mse%d_g'+ str(group_number_job) +'_f'+str(fit_index_job)
+base_name = rm.get_dir() + 'mse%d_g'+ str(group_number_job) +'_f'+str(fit_index_job)
 np.save(base_name%(1000), mse1000)
 print 'saved:', base_name%(1000)
 np.save(base_name%(2000), mse2000)
