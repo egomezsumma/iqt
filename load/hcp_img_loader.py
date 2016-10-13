@@ -65,6 +65,7 @@ def get_img(subject, file_name, bsize=55, size=12, i=8, j=7, k=8):
 
 # A diferencia de get_img indexa en el i,j,k que le pasas
 # no coinsidera la imagen como dividida en cubos
+# i,j,k : de la imagen HR
 def get_img_subvol(subject, file_name, bsize=55, size=10, i=96, j=84, k=96):
     if IN_NEF:
         src_name = NIFTY_FILE_NEF % (subject)
@@ -198,7 +199,11 @@ def load_subject_medium_noS0(subject_number,i,j,k,bval=None, bvalpos=None, bsize
     return img, gtab, idxs
 
 
+
 def load_subject_medium_noS0_subvol(subject_number,i,j,k,bval=None, bvalpos=None, bsize=55, base_folder='.'):
+    """
+        i,j,k : 
+    """
     subject = str(subject_number)
     folder = base_folder +'/HCP/' + subject + '/'
 

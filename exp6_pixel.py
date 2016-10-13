@@ -472,7 +472,19 @@ else:
 # ## Solving the problem and cross-validation (leave one out)
 
 if IS_NEF :
-    formula_to_use = sys.argv[2]
+    try:
+        param_name = sys.argv[1]
+    except IndexError:
+        raise 'Falta parametro 1 (param_name:'+str(params_range.keys())+')'
+else:
+    param_name = 'lamda'
+
+
+if IS_NEF :
+    try:
+        formula_to_use = sys.argv[2]
+    except IndexError:
+        raise 'Falta parametro 2 (formula_to_use:{f1, f2})'
 else:
     formula_to_use = 'f1'
 
@@ -491,10 +503,6 @@ else:
 
 n_samples = len(subjects)
 
-if IS_NEF :
-    param_name = sys.argv[1]
-else:
-    param_name = 'lamda'
 
 name_parameter = param_name
 rango = params_range[param_name]
@@ -504,25 +512,35 @@ mins_lamda   = []
 times        = []
 
 if IS_NEF :
-    group_number_job = int(sys.argv[3])
+    try:
+        group_number_job = int(sys.argv[3])
+    except IndexError:
+        raise 'Falta parametro 3 (group_number_job:[0...4])'
 else:
     group_number_job = 0
 
 if IS_NEF :
-    fit_index_job = int(sys.argv[4])%FITS
+    try:
+        fit_index_job = int(sys.argv[4])%FITS
+    except IndexError:
+        raise 'Falta parametro 4 (fit_index_job:[0...9])'
 else:
     fit_index_job = 0
 
 if IS_NEF :
-    id_job = int(sys.argv[5])
+    try:
+        id_job = int(sys.argv[5])
+    except IndexError:
+        raise 'Falta parametro 5 (id_job:int)'
 else:
     id_job = 1234
 
+
+# Save the job descriptor
 exp_name = 'exp6pixel'
 rm = ResultManager(RES_BASE_FOLDER  , 
                 exp_name + '/' + formula_to_use + '/' + param_name,  
                 id_job)
-
 rm.add_data('params_range', dict((x[0], list(x[1])) for x in params_range.items()))
 rm.add_data('name_parameter', name_parameter)
 rm.add_data('formula', formula_to_use)
@@ -531,8 +549,16 @@ rm.add_data('intercept', INTERCEPT)
 rm.add_data('max_its', MAXIT_BY_ROUND)
 rm.add_data('rounds', ROUNDS)
 
+# Optional
+if IS_NEF :
+    try:
+        description = str(sys.argv[5])
+        rm.add_data('description', description)        
+    except IndexError:
+        pass
 
-print 'STARTING JOB FOR', param_name, 'USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
+
+print 'STARTING JOB', id_job,'FOR', param_name, 'USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
 print 'WITH RANGE:', rango
 print 'Intercept:', str(INTERCEPT)
 sys.stdout.flush()
@@ -560,7 +586,7 @@ subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
 
 # las dim de las HCP son (12*12, 14*12, 12*12) masomenos
 it = d.DmriPatchIterator(range(96, 12*12, 12*12), range(84, 12*14, 12*14), range(8*12, 12*12, 12*12))
-for i, j, k in it:
+for i, j, k in it: # aca deberia incrementar de a m los i,j,k(de la hr-img)
     for group_num in [group_number_job]:
         subject_offset = GROUP_SIZE*group_number_job
         train_subjects = subjects[subject_offset:subject_offset+GROUP_SIZE]
