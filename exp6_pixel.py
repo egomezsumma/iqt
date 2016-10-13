@@ -417,16 +417,15 @@ def params_for(subjects, i, j, k, sample_maker, bvals_needed=None):
     #gc.collect()
 
     return G, intercept
-    
+
+
+## Setting parameters    
 from conf_exp6_pixel import *
-#
 
 if IS_NEF :
     RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/'
 else:
     RES_BASE_FOLDER = '/home/leexgo1987/Documentos/cs/inria/iqt/results'
-
-# ## Solving the problem and cross-validation (leave one out)
 
 if IS_NEF :
     try:
@@ -435,7 +434,6 @@ if IS_NEF :
         raise 'Falta parametro 1 (param_name:'+str(params_range.keys())+')'
 else:
     param_name = 'lamda'
-
 
 if IS_NEF :
     try:
@@ -446,10 +444,6 @@ else:
     formula_to_use = 'f1'
 
 FORMULA = formulas[formula_to_use]
-
-#bvals2000pos = [18, 27, 69, 75, 101, 107]
-
-## Con imagenes pequenas multi-shel
 SCALE=2
 loader_func = hcp.load_subject_medium_noS0_subvol
 
@@ -463,10 +457,6 @@ n_samples = len(subjects)
 
 name_parameter = param_name
 rango = params_range[param_name]
-
-# Metrics to save
-mins_lamda   = []
-times        = []
 
 if IS_NEF :
     try:
@@ -493,7 +483,7 @@ else:
     id_job = 1234
 
 
-# Save the job descriptor
+## Save the job descriptor
 exp_name = 'exp6pixel'
 rm = ResultManager(RES_BASE_FOLDER  , 
                 exp_name + '/' + formula_to_use + '/' + param_name,  
@@ -527,20 +517,24 @@ RANGO= len(rango)
 rm.add_data('n_samples', n_samples)
 rm.save()
 
-subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
+#subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
 
+## Patchs dimensions
 m=2
 size=6
 x0, y0, z0 = 96, 84, 96
 b0s=4
 
-original = np.zeros((size, size, size, BSIZE-b0s), dtype='float32')
-reconstructed = dict((val, np.zeros((size, size, size, BSIZE-b0s), dtype='float32')) for val in rango)
+## HR original and reconstructed
+original = np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')
+reconstructed = dict((val, np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')) for val in rango)
 
 # las dim de las HCP son (12*12, 14*12, 12*12) masomenos
 it = d.DmriPatchIterator(range(x0, x0+m*size, m), range(y0, y0+m*size, m), range(z0, z0+m*size, m))
 for i, j, k in it: # aca deberia incrementar de a m los i,j,k(de la hr-img)
     print 'Doing patch:', i, j, k
+    
+    ## Selecting group
     group_num = group_number_job
     subject_offset = GROUP_SIZE*group_number_job
     train_subjects = subjects[subject_offset:subject_offset+GROUP_SIZE]
@@ -548,47 +542,45 @@ for i, j, k in it: # aca deberia incrementar de a m los i,j,k(de la hr-img)
     test_set = test_set[:FITS]
     print 'len(test)', len(test_set), 'len(group)', len(train_subjects)
 
-    # Linear regresion of this group
+    ## Linear regresion of this group
     print
     print datetime.datetime.now()
     train_time = time.time()
     G, intercept = params_for(train_subjects, i, j, k, sample_maker)
     train_time = time.time() - train_time
     print "== Training of Group:%d    (%d'%d'')"%(group_num, int(train_time/60), int(train_time%60)), datetime.datetime.now()
-
     sys.stdout.flush()
 
-    for subject_index in [fit_index_job]:
-        subject = test_set[subject_index]
-        print '/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/'
-        print t1, '== Group:%d of %d Fiting subject:%d(%d,%d,%d) of %d (%d)#' % (group_num, GROUPS, subject_index,i,j,k, FITS,  subject), datetime.datetime.now()
-        print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name), datetime.datetime.now()
-        sys.stdout.flush()
 
-        seg = solveMin_fitCosnt(name_parameter,
-                              rango,
-                              subject,
-                              i, j, k,
-                              loader_func,
-                              G,
-                              intercept=intercept,
-                              scale=SCALE,
-                              verbose=False)
-
-        times.append(seg)
+    ## Solving the problem
+    subject = test_set[fit_index_job]
+    print '/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/'
+    print t1, '== Group:%d of %d Fiting subject:%d(%d,%d,%d) of %d (%d)#' % (group_num, GROUPS, fit_index_job,i,j,k, FITS,  subject), datetime.datetime.now()
+    print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name), datetime.datetime.now()
+    sys.stdout.flush()
+    # Solve the proble for each value in rango for the current paramter (lamda, alpha ...) 
+    seg = solveMin_fitCosnt(name_parameter,
+                          rango,
+                          subject,
+                          i, j, k,
+                          loader_func,
+                          G,
+                          intercept=intercept,
+                          scale=SCALE,
+                          verbose=False)
+    print ' === TOTAL TIME :',  str(int(seg//60))+"'", str(int(seg%60))+ '"' , datetime.datetime.now()
+    sys.stdout.flush()
 
     del(G, intercept)
-        #gc.collect()
 
 
-# Saving the original image 
+## Saving the original image 
 if group_number_job == fit_index_job:
     print '$$ saving original image of group', group_number_job, 'in', rm.get_dir() + 'i_hr_g%d' % (group_number_job)
     np.save(rm.get_dir() + 'i_hr_g%d' % (group_number_job), original)
 
 
-
-## Calculating mse of all reconstructed dmri
+## Calculating mse's of all reconstructed dmri
 mse = []
 mse1000 = []
 mse2000 = []
@@ -599,18 +591,18 @@ b2000_index = indexs(gtab.bvals, 2000)
 b3000_index = indexs(gtab.bvals, 3000)
 for val in rango:
     A = reconstructed[val]
+    
     _mse = ((A-i_hr)**2).mean()
-    print t3, 'mse=', _mse, mse
+    print val, 'mse=', _mse, mse
 
     _mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
-    print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', _mse1000
-    #sys.stdout.flush()
-
+    print val, 'mse1000=', _mse1000
+    
     _mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
-    #info['mse2000'].append(mse2000)
+    print val, 'mse2000=', _mse2000
 
     _mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
-    #info['mse3000'].append(mse3000)
+    print val, 'mse3000=', _mse3000
 
     mse.append(_mse)
     mse1000.append(_mse1000)
@@ -623,24 +615,7 @@ for val in rango:
         np.save(rm.get_dir() + 'A_g%d_val%d' % (group_number_job, val), A)
 
 
-print 'Ultimos calculos', datetime.datetime.now()
-sys.stdout.flush()
-
-# Persist min vals
-pmins_lamda   = parray(rm.get_dir() + 'mins_mses.txt', mins_lamda)
-ptimes        = parray(rm.get_dir() + 'times.txt',times)
-#poptimal_vals = parray(base_folder +'optimal_vals.txt', optimal_vals)
-
-# Log spended time
-total_sec = np.array(times).sum()
-print ' === TOTAL TIME :',  str(int(total_sec//60))+"'", str(int(total_sec%60))+ '"' , datetime.datetime.now()
-sys.stdout.flush()
-
-# Persist results
-#if base_folder is not None: 
-#    np.save(base_folder+ 'mins_alphas', mins_lamda)
-
-
+## Saving mse's
 name = '%d_%d_%d' % (RANGO, FITS, GROUPS)
 base_name = rm.get_dir() + 'mse_g'+ str(group_number_job) +'_f'+str(fit_index_job)
 np.save(base_name, mse)
@@ -654,16 +629,5 @@ np.save(base_name%(3000), mse3000)
 print 'saved:', base_name%(3000)
 
 
-mins_lamda = np.array(mins_lamda)
-print 'Subjects fitted = ', mins_lamda.shape
-print 'mean=', mins_lamda.mean(),  mins_lamda
-#plt.bar(xrange(mins_lamda.size), mins_lamda)
-#plt.savefig(base_folder + '/mins_' + param_name + '.pdf')
-
-# In[11]:
-print 'rangos:', rango
-print 'mins_%s:' % (param_name) , mins_lamda
-
-#dict((v.name(), v.value) for v in prob.variables())
 print 'Lito!', datetime.datetime.now()
 sys.stdout.flush()

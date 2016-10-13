@@ -9,7 +9,6 @@ import mymapl.minmapl as mapl
 def get_sample_dwi(subject_number,i,j,k, loader_func, bval=None, bvalpos=None,bsize=55, scale=2):
     """
     Get the sample for the subjets numbers[index] and retur
-    :param index: index on numbers of subject needed
     :param numbers: reference numbers for subject
     :param loader_func: funcion that load a especific subject
     :param bval: for single-shell data the only bval for buil the gtab
@@ -25,7 +24,7 @@ def get_sample_dwi(subject_number,i,j,k, loader_func, bval=None, bvalpos=None,bs
     print 'scale=', scale, 'lr.shape=', lr.shape
     data = img.get_data()
     data_noS0 = data[:, :, :, idxs]
-    s0_idxs = [i for i in xrange(max(idxs) + 1) if i not in idxs]
+    s0_idxs = [index for index in xrange(max(idxs) + 1) if index not in idxs]
     return data_noS0, lr[:, :, :, idxs], data[:, :, :, s0_idxs], lr[:, :, :, s0_idxs], gtab
 
 def get_sample_dwi_pixel(subject_number,i,j,k, loader_func, bval=None, bvalpos=None, bsize=55, scale=2):
@@ -41,7 +40,7 @@ def get_sample_dwi_pixel(subject_number,i,j,k, loader_func, bval=None, bvalpos=N
 
     data = img.get_data()
     data_noS0 = data[:, :, :, idxs]
-    s0_idxs = [i for i in xrange(max(idxs) + 1) if i not in idxs]
+    s0_idxs = [index for index in xrange(max(idxs) + 1) if index not in idxs]
     data_S0 = data[:, :, :, s0_idxs]
 
     # Patch must be a cube
@@ -151,8 +150,8 @@ def buildT_grouping_by(subjects,i, j, k, sample_getter, use_bvals=False,scale=2)
 
     dicX = split_by(lr, gtab, use_bvals=use_bvals)
     dicY = split_by(hr, gtab, use_bvals=use_bvals)
-    for i in range(1, len(subjects)):
-        subject = subjects[i]
+    for si in range(1, len(subjects)):
+        subject = subjects[si]
 
         if use_bvals:
             hr, lr, gtab = sample_getter(subject, i, j, k, scale)
