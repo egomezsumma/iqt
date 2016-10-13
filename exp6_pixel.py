@@ -280,7 +280,6 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
 
 # In[6]:
 def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, intercept=None, scale=2, verbose=False, prob=None):
-
     definition_fun = None
     if FORMULA == FORMULA_NO1 :
         # Get input for the subject to fit
@@ -316,38 +315,23 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     nx, ny, nz = Nx / scale, Ny / scale, Nz / scale
     vhr, vlr = Nx * Ny * Nz, nx * ny * nz
 
-    cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1 = None, None, None
-
-    b1000_index = indexs(gtab.bvals, 1000)
-    b2000_index = indexs(gtab.bvals, 2000)
-    b3000_index = indexs(gtab.bvals, 3000)
-
-    measures = ['mse', 'mse1000', 'mse2000', 'mse3000']
-    #info = dict((key, parray(base_folder + key + '_' + str(subject) + '.txt')) for key in measures)
-    info = dict((key, []) for key in measures)
     seg = 0
-
-   
     """ Sequencial"""
     for val in the_range :
-        _mse, _mse1000, _mse2000, _mse3000, seg = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
-        info['mse'].append(_mse)
-        info['mse1000'].append(_mse1000)
-        info['mse2000'].append(_mse2000)
-        info['mse3000'].append(_mse3000)
+        A, seg = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun)
+        print 'Setting reconstructed of', name_parameter, '=', val, 'in:',i-x0,(i-x0)+m, j-y0,(j-y0)+m, k-z0,(k-z0)+m   
+        reconstructed[val][i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = A
+        del(A)
         seg += seg
-    print 'info[mse]', info['mse']
-
-    if group_number_job == fit_index_job:
-        print '$$ saving original image of group', group_number_job, 'in', rm.get_dir() + 'i_hr_g%d' % (group_number_job)
-        np.save(rm.get_dir() + 'i_hr_g%d' % (group_number_job), i_hr)
+    
+    print 'Setting original in:',i-x0,(i-x0)+m, j-y0,(j-y0)+m, k-z0,(k-z0)+m 
+    original[i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = i_hr
 
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
-    # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
-    return None, None, seg, None, None, None, None, info
+    return seg
 
     
-def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters=1000, verbose=False, res=None):
+def try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun):
     print '****before define problem val=', val, '    ',  datetime.datetime.now()
     prob = None
     prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun(name_parameter+'='+str(val))
@@ -397,42 +381,15 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
         cvxYhr = variables['cvxYhr']
         A = np.asarray(cvxYhr.value, dtype='float32').reshape((Nx, Ny, Nz, Nb), order='F')
     else:
-        print 'tomando M*C'
+        print 'Tomando M*C'
         A = M.dot(C.reshape((Nx*Ny*Nz, Nc), order='F').T).T
         A = A.reshape((Nx, Ny, Nz, Nb), order='F')
 
-
-    _mse = ((A-i_hr)**2).mean()
-    #info['mse'].append(mse)
-    print t3, 'mse=', _mse, mse
-
-    _mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
-    #info['mse1000'].append(mse1000)
-    print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', _mse1000
-    #sys.stdout.flush()
-
-    _mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
-    #info['mse2000'].append(mse2000)
-
-    _mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
-    #info['mse3000'].append(mse3000)
-
-
-    if group_number_job == fit_index_job:
-        print '$$ saving recontructed image of group', group_number_job, 'in', rm.get_dir() + 'A_g%d_val%d' % (group_number_job, val)
-        np.save(rm.get_dir() + 'A_g%d_val%d' % (group_number_job, val), A)
-
-    del (A, C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
+    del (C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
     print t3, '.', datetime.datetime.now()
-    #sys.stdout.flush()
-    print t3, '.', datetime.datetime.now()
-    print t3, '.'
+    print t3, 'A.shape=', A.shape
 
-
-    if res is not None:
-        res[i] = (_mse, _mse1000, _mse2000, _mse3000, seg)
-
-    return _mse, _mse1000, _mse2000, _mse3000, seg
+    return A, seg
 
 
 def indexs(a, val):
@@ -570,87 +527,100 @@ RANGO= len(rango)
 rm.add_data('n_samples', n_samples)
 rm.save()
 
-"""
-mse = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
-mse1000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
-mse2000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
-mse3000 = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
-"""
-mse = np.zeros((RANGO), dtype='float32')
-mse1000 = np.zeros((RANGO), dtype='float32')
-mse2000 = np.zeros((RANGO), dtype='float32')
-mse3000 = np.zeros((RANGO), dtype='float32')
-
-
 subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
 
+m=2
+size=6
+x0, y0, z0 = 96, 84, 96
+b0s=4
+
+original = np.zeros((size, size, size, BSIZE-b0s), dtype='float32')
+reconstructed = dict((val, np.zeros((size, size, size, BSIZE-b0s), dtype='float32')) for val in rango)
+
 # las dim de las HCP son (12*12, 14*12, 12*12) masomenos
-it = d.DmriPatchIterator(range(96, 12*12, 12*12), range(84, 12*14, 12*14), range(8*12, 12*12, 12*12))
+it = d.DmriPatchIterator(range(x0, x0+m*size, m), range(y0, y0+m*size, m), range(z0, z0+m*size, m))
 for i, j, k in it: # aca deberia incrementar de a m los i,j,k(de la hr-img)
-    for group_num in [group_number_job]:
-        subject_offset = GROUP_SIZE*group_number_job
-        train_subjects = subjects[subject_offset:subject_offset+GROUP_SIZE]
-        test_set = subjects[:subject_offset] + subjects[subject_offset+GROUP_SIZE:]
-        test_set = test_set[:FITS]
-        print 'len(test)', len(test_set), 'len(group)', len(train_subjects)
+    print 'Doing patch:', i, j, k
+    group_num = group_number_job
+    subject_offset = GROUP_SIZE*group_number_job
+    train_subjects = subjects[subject_offset:subject_offset+GROUP_SIZE]
+    test_set = subjects[:subject_offset] + subjects[subject_offset+GROUP_SIZE:]
+    test_set = test_set[:FITS]
+    print 'len(test)', len(test_set), 'len(group)', len(train_subjects)
 
-        # Linear regresion of this group
-        print
-        print datetime.datetime.now()
-        train_time = time.time()
-        G, intercept = params_for(train_subjects, i, j, k, sample_maker)
-        train_time = time.time() - train_time
-        print "== Training of Group:%d    (%d'%d'')"%(group_num, int(train_time/60), int(train_time%60)), datetime.datetime.now()
+    # Linear regresion of this group
+    print
+    print datetime.datetime.now()
+    train_time = time.time()
+    G, intercept = params_for(train_subjects, i, j, k, sample_maker)
+    train_time = time.time() - train_time
+    print "== Training of Group:%d    (%d'%d'')"%(group_num, int(train_time/60), int(train_time%60)), datetime.datetime.now()
 
+    sys.stdout.flush()
+
+    for subject_index in [fit_index_job]:
+        subject = test_set[subject_index]
+        print '/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/'
+        print t1, '== Group:%d of %d Fiting subject:%d(%d,%d,%d) of %d (%d)#' % (group_num, GROUPS, subject_index,i,j,k, FITS,  subject), datetime.datetime.now()
+        print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name), datetime.datetime.now()
         sys.stdout.flush()
 
-        for subject_index in [fit_index_job]:
-            subject = test_set[subject_index]
-            print '/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/'
-            print t1, '== Group:%d of %d Fiting subject:%d(%d,%d,%d) of %d (%d)#' % (group_num, GROUPS, subject_index,i,j,k, FITS,  subject), datetime.datetime.now()
-            print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name), datetime.datetime.now()
-            sys.stdout.flush()
+        seg = solveMin_fitCosnt(name_parameter,
+                              rango,
+                              subject,
+                              i, j, k,
+                              loader_func,
+                              G,
+                              intercept=intercept,
+                              scale=SCALE,
+                              verbose=False)
 
-            A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, res =\
-                solveMin_fitCosnt(name_parameter,
-                                  rango,
-                                  subject,
-                                  i, j, k,
-                                  loader_func,
-                                  G,
-                                  intercept=intercept,
-                                  scale=SCALE,
-                                  verbose=False)
+        times.append(seg)
 
-            # Saving all results for analize latter
-            mse[:] = res['mse']
-            mse1000[:] = res['mse1000']
-            mse2000[:] = res['mse2000']
-            mse3000[:] = res['mse3000']
-
-            # Keeping the parameter value of each fitting that produce the min-mse (of all the val tested for the subjetc)
-            index = np.argmin(np.array(res['mse']))
-            print 'index del minimo:', index
-            min_lamda = rango[index]
-            mins_lamda.append(min_lamda)
-
-            ## Para guardar info si se quiere
-            #for key in res.keys():
-            #    p = parray(base_folder + key + '_' + str(subject) + '.txt')
-            #    p = p+res[key]
-
-            times.append(seg)
-            #optimal_vals.append(prob.value)
-
-            if A is not None:
-                del(prob, A, C, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
-            del(res)
-            del(seg)
-            #print 'len(gc.garbage[:])', len(gc.garbage[:]),'number of unreachable objects found:', gc.collect()
-
-        del(G, intercept)
+    del(G, intercept)
         #gc.collect()
 
+
+# Saving the original image 
+if group_number_job == fit_index_job:
+    print '$$ saving original image of group', group_number_job, 'in', rm.get_dir() + 'i_hr_g%d' % (group_number_job)
+    np.save(rm.get_dir() + 'i_hr_g%d' % (group_number_job), original)
+
+
+
+## Calculating mse of all reconstructed dmri
+mse = []
+mse1000 = []
+mse2000 = []
+mse3000 = []
+i_hr = original
+b1000_index = indexs(gtab.bvals, 1000)
+b2000_index = indexs(gtab.bvals, 2000)
+b3000_index = indexs(gtab.bvals, 3000)
+for val in rango:
+    A = reconstructed[val]
+    _mse = ((A-i_hr)**2).mean()
+    print t3, 'mse=', _mse, mse
+
+    _mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
+    print t3, A[:, :, :, b1000_index].shape, i_hr[:, :, :, b1000_index].shape, 'mse1000=', _mse1000
+    #sys.stdout.flush()
+
+    _mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
+    #info['mse2000'].append(mse2000)
+
+    _mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
+    #info['mse3000'].append(mse3000)
+
+    mse.append(_mse)
+    mse1000.append(_mse1000)
+    mse2000.append(_mse2000)
+    mse3000.append(_mse3000)
+
+    # Saving some reconstructed  
+    if group_number_job == fit_index_job:
+        print '$$ saving recontructed image of group', group_number_job, 'in', rm.get_dir() + 'A_g%d_val%d' % (group_number_job, val)
+        np.save(rm.get_dir() + 'A_g%d_val%d' % (group_number_job, val), A)
 
 
 print 'Ultimos calculos', datetime.datetime.now()

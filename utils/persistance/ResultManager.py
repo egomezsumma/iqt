@@ -17,8 +17,11 @@ class ResultManager(object):
 
     def save(self):
         if not os.path.exists(self.directory):
-            print 'creating dir', self.directory
-            os.makedirs(self.directory)
+            try:
+                os.makedirs(self.directory)
+                print 'dir', self.directory, 'created!' 
+            except OSError e :
+                print str(e)
             
         print 'saving data.json', self.data
         if not os.path.exists(self.directory+ "/data.json"):
