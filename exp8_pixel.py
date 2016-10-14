@@ -279,11 +279,11 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
     return prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1
 
 # In[6]:
-def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, intercept=None, scale=2, verbose=False, prob=None):
+def solveMin_fitCosnt(name_parameter, bsize, subject,i,j,k, loader_func, G, intercept=None, scale=2, verbose=False, prob=None):
     definition_fun = None
     if FORMULA == FORMULA_NO1 :
         # Get input for the subject to fit
-        _, c_lr, gtab, i_hr, i_lr = samples.get_sample_of_mapl_pixel(subject,i,j,k, loader_func, bsize=BSIZE, scale=SCALE)
+        _, c_lr, gtab, i_hr, i_lr = samples.get_sample_of_mapl_pixel(subject,i,j,k, loader_func, bsize=bsize, scale=SCALE)
         c_lr = samples.split_by(c_lr)
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
@@ -300,7 +300,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
                                     toprint=toprint)
     else:
         # Get input for the subject to fit
-        i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, i,j,k,loader_func, bsize=BSIZE, scale=SCALE)
+        i_hr, i_lr, gtab = samples.get_sample_of_dwi(subject, i,j,k,loader_func, bsize=bsize, scale=SCALE)
         #print t2, 'i_hr:', i_hr.shape, 'i_lr:', i_lr.shape
         i_lr = samples.split_by_bval(i_lr, gtab)
         # Mapl params
@@ -315,32 +315,27 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     nx, ny, nz = Nx / scale, Ny / scale, Nz / scale
     vhr, vlr = Nx * Ny * Nz, nx * ny * nz
 
-    seg = 0
-    """ Sequencial"""
-    for val in the_range :
-        A, seg = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun)
-        print 'Setting reconstructed of', name_parameter, '=', val, 'in:',i-x0,(i-x0)+m, j-y0,(j-y0)+m, k-z0,(k-z0)+m   
-        reconstructed[val][i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = A
-        del(A)
-        seg += seg
-    
+    A, seg = try_value(name_parameter, bsize, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun)
+    print 'Setting reconstructed of', name_parameter, '=', bsize, 'in:',i-x0,(i-x0)+m, j-y0,(j-y0)+m, k-z0,(k-z0)+m   
+    reconstructed[bsize] = reconstructed[bsize][:, :, :, :A.shape[3]]
+    reconstructed[bsize][i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m,:] = A
+    # cutting the b-sizes no-zero
+    print "$$$ reconstructed[", bsize, "].shape =", reconstructed[bsize].shape
+    del(A)
+        
     print 'Setting original in:',i-x0,(i-x0)+m, j-y0,(j-y0)+m, k-z0,(k-z0)+m 
-    original[i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = i_hr
+    if bsize == 55 :
+        original[i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m, :] = i_hr
 
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
     return seg, gtab
 
     
-def try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun):
-    print '****before define problem val=', val, '    ',  datetime.datetime.now()
+def try_value(name_parameter, bsize, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun):
+    print '****before define problem val=', bsize, '    ',  datetime.datetime.now()
     prob = None
-    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun(name_parameter+'='+str(val))
+    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun(name_parameter+'='+str(bsize))
     print 'id(prob)', id(prob)
-
-    parameters = dict( (v.name(), v) for v in prob.parameters())
-    parameters[name_parameter].value = val
-    print t3, 'setting new ', name_parameter, '=',  parameters[name_parameter].value, '    ', datetime.datetime.now()
-    sys.stdout.flush()
 
     max_its = MAXIT_BY_ROUND
     rounds = ROUNDS
@@ -365,7 +360,7 @@ def try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun):
         pval_ant = prob.value
     seg = time.time() - start_time
     minutes = int(seg / 60)
-    print t3, "--- time of optimization : %d' %d'' (subject:%s, %s: %f) ---" % (minutes , seg%60, subject, name_parameter, val)
+    print t3, "--- time of optimization : %d' %d'' (subject:%s, %s: %f) ---" % (minutes , seg%60, subject, name_parameter, bsize)
     print t3, "--- status:", prob.status, "optimal value", prob.value ,np.abs(pval_ant-prob.value),  datetime.datetime.now()
     #sys.stdout.flush()
 
@@ -420,7 +415,7 @@ def params_for(subjects, i, j, k, sample_maker, bvals_needed=None):
 
 
 ## Setting parameters    
-from conf_exp6_pixel import *
+from conf_exp8_pixel import *
 
 if IS_NEF :
     RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/'
@@ -456,7 +451,6 @@ n_samples = len(subjects)
 
 
 name_parameter = param_name
-rango = params_range[param_name]
 
 if IS_NEF :
     try:
@@ -482,19 +476,21 @@ if IS_NEF :
 else:
     id_job = 1234
 
+bsizes = [55, 50, 45, 40, 35, 30, 25, 20, 15, 10]
 
 ## Save the job descriptor
-exp_name = 'exp6pixel'
+exp_name = 'exp8pixel'
 rm = ResultManager(RES_BASE_FOLDER  , 
                 exp_name + '/' + formula_to_use + '/' + param_name,  
                 id_job)
-rm.add_data('params_range', dict((x[0], list(x[1])) for x in params_range.items()))
+#rm.add_data('params_range', dict((x[0], list(x[1])) for x in params_range.items()))
 rm.add_data('name_parameter', name_parameter)
 rm.add_data('formula', formula_to_use)
 rm.add_data('scale', SCALE)
 rm.add_data('intercept', INTERCEPT)
 rm.add_data('max_its', MAXIT_BY_ROUND)
 rm.add_data('rounds', ROUNDS)
+rm.add_data('bsize', bsizes)
 
 # Optional
 if IS_NEF :
@@ -506,13 +502,13 @@ if IS_NEF :
 
 
 print 'STARTING JOB', id_job,'FOR', param_name, 'USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
-print 'WITH RANGE:', rango
+print 'WITH RANGE:', bsizes
 print 'Intercept:', str(INTERCEPT)
 sys.stdout.flush()
 
 
 GROUPS = n_samples/GROUP_SIZE
-RANGO= len(rango)
+RANGO= len(bsizes)
 
 rm.add_data('n_samples', n_samples)
 rm.save()
@@ -521,13 +517,14 @@ rm.save()
 
 ## Patchs dimensions
 m=2
-size=6
+size=2
 x0, y0, z0 = 94, 82, 94
 b0s=4
 
 ## HR original and reconstructed
 original = np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')
-reconstructed = dict((val, np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')) for val in rango)
+reconstructed = dict((bsize, np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')) for bsize in bsizes)
+
 
 # las dim de las HCP son (12*12, 14*12, 12*12) masomenos
 it = d.DmriPatchIterator(range(x0, x0+m*size, m), range(y0, y0+m*size, m), range(z0, z0+m*size, m))
@@ -559,15 +556,16 @@ for i, j, k in it: # aca deberia incrementar de a m los i,j,k(de la hr-img)
     print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name), datetime.datetime.now()
     sys.stdout.flush()
     # Solve the proble for each value in rango for the current paramter (lamda, alpha ...) 
-    seg, gtab = solveMin_fitCosnt(name_parameter,
-                          rango,
-                          subject,
-                          i, j, k,
-                          loader_func,
-                          G,
-                          intercept=intercept,
-                          scale=SCALE,
-                          verbose=False)
+    for bsize in bsizes :
+        seg, gtab = solveMin_fitCosnt(name_parameter,
+                              bsize,
+                              subject,
+                              i, j, k,
+                              loader_func,
+                              G,
+                              intercept=intercept,
+                              scale=SCALE,
+                              verbose=False)
     print ' === TOTAL TIME :',  str(int(seg//60))+"'", str(int(seg%60))+ '"' , datetime.datetime.now()
     sys.stdout.flush()
 
@@ -586,23 +584,24 @@ mse1000 = []
 mse2000 = []
 mse3000 = []
 i_hr = original
+print 'gtab.bvals.shape', gtab.bvals.shape
 b1000_index = indexs(gtab.bvals, 1000)
 b2000_index = indexs(gtab.bvals, 2000)
 b3000_index = indexs(gtab.bvals, 3000)
-for val in rango:
-    A = reconstructed[val]
+for bsize in bsizes:
+    A = reconstructed[bsize]
     
-    _mse = ((A-i_hr)**2).mean()
-    print val, 'mse=', _mse, mse
+    _mse = ((A-i_hr[:,:,:, :A.shape[3]])**2).mean()
+    print bsize, 'mse=', _mse, mse
 
-    _mse1000 = ((A[:, :, :, b1000_index]-i_hr[:, :, :, b1000_index])**2).mean()
-    print val, 'mse1000=', _mse1000
+    _mse1000 = ((A[:, :, :, b1000_index]-i_hr[:,:,:, :A.shape[3]][:, :, :, b1000_index])**2).mean()
+    print bsize, 'mse1000=', _mse1000
     
-    _mse2000 = ((A[:, :, :, b2000_index]-i_hr[:, :, :, b2000_index])**2).mean()
-    print val, 'mse2000=', _mse2000
+    _mse2000 = ((A[:, :, :, b2000_index]-i_hr[:,:,:, :A.shape[3]][:, :, :, b2000_index])**2).mean()
+    print bsize, 'mse2000=', _mse2000
 
-    _mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
-    print val, 'mse3000=', _mse3000
+    _mse3000 = ((A[:, :, :, b3000_index]-i_hr[:,:,:, :A.shape[3]][:, :, :, b3000_index])**2).mean()
+    print bsize, 'mse3000=', _mse3000
 
     mse.append(_mse)
     mse1000.append(_mse1000)
@@ -611,8 +610,8 @@ for val in rango:
 
     # Saving some reconstructed  
     if group_number_job == fit_index_job:
-        print '$$ saving recontructed image of group', group_number_job, 'in', rm.get_dir() + 'A_g%d_val%d' % (group_number_job, val)
-        np.save(rm.get_dir() + 'A_g%d_val%d' % (group_number_job, val), A)
+        print '$$ saving recontructed image of group', group_number_job, 'in', rm.get_dir() + 'A_g%d_val%d' % (group_number_job, bsize)
+        np.save(rm.get_dir() + 'A_g%d_val%d' % (group_number_job, bsize), A)
 
 
 ## Saving mse's
