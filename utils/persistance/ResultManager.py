@@ -20,7 +20,7 @@ class ResultManager(object):
             try:
                 os.makedirs(self.directory)
                 print 'dir', self.directory, 'created!' 
-            except OSError e :
+            except OSError, e :
                 print str(e)
             
         print 'saving data.json', self.data

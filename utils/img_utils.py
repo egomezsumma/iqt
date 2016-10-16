@@ -41,7 +41,7 @@ def downsampling2(img, scale=2):
 
     affine = np.identity(4,dtype=float)
     #Load and show the zooms which hold the voxel size.
-    zooms = np.array([1, 1, 1])
+    zooms = np.array([1.0, 1.0, 1.0])
     dataD, affine2 = reslice(data, affine, zooms, np.dot(scale,np.array(zooms)))
     return dataD
 

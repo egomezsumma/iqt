@@ -52,10 +52,13 @@ import optimization.tvnorm3d as tvn
 # 
 # $ \min_{C^{hr}} \{ ||GC^{hr} - C^{lr}||^2  + ||C||_{1} \}$
 # 
+from utils import img_utils
+
 
 # In[5]:
 def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None, toprint=''):
     Nx, Ny, Nz = (2, 2, 2)#TODO: pasar
+    nx, ny, nz = (5, 5 ,5)
     Nb, Nc = M.shape
 
 
@@ -70,7 +73,15 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None,
     ChrValueInitial = np.ones((vhr*Nc, 1), dtype='float32')
     for c in xrange(Nc): 
         c_offset_hr = c*vhr
-        ChrValueInitial[c_offset_hr:c_offset_hr+vhr] = ChrValueInitial[c_offset_hr:c_offset_hr+vhr]*Clr[c].mean()
+        #import pdb; pdb.set_trace()
+        # nose porque me hace un borde de 1 si no es par el original
+        upsampling = img_utils.downsampling2(Clr[c].reshape((nx, ny, nz)), 0.5)[1:-1, 1:-1, 1:-1]
+        print 'upsampling.shape', upsampling.shape
+        # solo el centro
+        upsampling = upsampling[4:6, 4:6, 4:6]
+        #ChrValueInitial[c_offset_hr:c_offset_hr+vhr] = ChrValueInitial[c_offset_hr:c_offset_hr+vhr]*Clr[c].mean()
+        print ChrValueInitial[c_offset_hr:c_offset_hr+vhr].shape, upsampling.reshape((Nx*Ny*Nz,1), order='F').shape
+        ChrValueInitial[c_offset_hr:c_offset_hr+vhr] = upsampling.reshape((Nx*Ny*Nz,1), order='F')
     cvxChr.value = ChrValueInitial
     
     ## Fidelity expression
@@ -373,9 +384,15 @@ def try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun):
     variables = dict( (v.name(), v) for v in prob.variables())
 
     cvxChr = variables['cvxChr']
-    C = np.asarray(cvxChr.value, dtype='float32').reshape((Nx, Ny, Nz, Nc), order='F')
-    print id(cvxChr),'@@@@@@@ C.mean=',  C.mean()
-
+    try:
+        C = np.asarray(cvxChr.value, dtype='float32').reshape((Nx, Ny, Nz, Nc), order='F')
+        print id(cvxChr),'@@@@@@@ C.mean=',  C.mean()
+    except ValueError, e:
+        if cvxChr.value is None :
+            print 'cvxChr.value es Null', prob.status
+        #print cvxChr.size, (Nx, Ny, Nz, Nc)
+        C = np.zeros((Nx, Ny, Nz, Nc), dtype='float32')
+    
     if 'cvxYhr' in variables :
         print 'Tomando cvxYhr'
         cvxYhr = variables['cvxYhr']
