@@ -499,6 +499,10 @@ if IS_NEF :
 else:
     id_job = 1234
 
+#TODOS:
+# - Hacer el upsampling y desp calcular Chr
+# -grabar en un json o algo de que pedazo, de que sujeto, de que valor de parm dio unbounded
+# -(futuro) si da unbounded poner la upsampleada
 
 ## Save the job descriptor
 exp_name = 'exp6pixel'
@@ -516,7 +520,7 @@ rm.add_data('rounds', ROUNDS)
 # Optional
 if IS_NEF :
     try:
-        description = str(sys.argv[5])
+        description = str(sys.argv[6])
         rm.add_data('description', description)        
     except IndexError:
         pass
