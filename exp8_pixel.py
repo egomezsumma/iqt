@@ -55,7 +55,7 @@ from utils import img_utils
 # 
 
 # In[5]:
-def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None, toprint=''):
+def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,c_hr_initial=None, intercept=None, toprint=''):
     Nx, Ny, Nz = (2, 2, 2)#TODO: pasar
     nx, ny, nz = (5, 5 ,5)
     Nb, Nc = M.shape
@@ -67,22 +67,24 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None,
 
     ## MAPL params
     #cvxChr = cvx.Constant(C_hr.reshape(-1, order='F'))
-    
     cvxChr = cvx.Variable(vhr*Nc, name='cvxChr')
-    ChrValueInitial = np.ones((vhr*Nc, 1), dtype='float32')
-    for c in xrange(Nc): 
-        c_offset_hr = c*vhr
-        #import pdb; pdb.set_trace()
-        # nose porque me hace un borde de 1 si no es par el original
-        upsampling = img_utils.downsampling2(Clr[c].reshape((nx, ny, nz)), 0.5)[1:-1, 1:-1, 1:-1]
-        print 'upsampling.shape', upsampling.shape
-        # solo el centro
-        upsampling = upsampling[4:6, 4:6, 4:6]
-        #ChrValueInitial[c_offset_hr:c_offset_hr+vhr] = ChrValueInitial[c_offset_hr:c_offset_hr+vhr]*Clr[c].mean()
-        print ChrValueInitial[c_offset_hr:c_offset_hr+vhr].shape, upsampling.reshape((Nx*Ny*Nz,1), order='F').shape
-        ChrValueInitial[c_offset_hr:c_offset_hr+vhr] = upsampling.reshape((Nx*Ny*Nz,1), order='F')
-    cvxChr.value = ChrValueInitial
-    
+    if c_hr_initial is None:
+        ChrValueInitial = np.ones((vhr*Nc, 1), dtype='float32')
+        for c in xrange(Nc): 
+            c_offset_hr = c*vhr
+            #import pdb; pdb.set_trace()
+            # nose porque me hace un borde de 1 si no es par el original
+            upsampling = img_utils.downsampling2(Clr[c].reshape((nx, ny, nz)), 0.5)[1:-1, 1:-1, 1:-1]
+            print 'upsampling.shape', upsampling.shape
+            # solo el centro
+            upsampling = upsampling[4:6, 4:6, 4:6]
+            #ChrValueInitial[c_offset_hr:c_offset_hr+vhr] = ChrValueInitial[c_offset_hr:c_offset_hr+vhr]*Clr[c].mean()
+            print ChrValueInitial[c_offset_hr:c_offset_hr+vhr].shape, upsampling.reshape((Nx*Ny*Nz,1), order='F').shape
+            ChrValueInitial[c_offset_hr:c_offset_hr+vhr] = upsampling.reshape((Nx*Ny*Nz,1), order='F')
+        cvxChr.value = ChrValueInitial
+    else:
+        cvxChr.value = c_hr_initial.reshape(-1, order='F')
+
     ## Fidelity expression
     cvxG = G
     fidelity_list = []
@@ -297,7 +299,8 @@ def solveMin_fitCosnt(name_parameter, bsize, subject,i,j,k, loader_func, G, inte
         c_lr = samples.split_by(c_lr)
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
-
+        i_hr_fake = img_utils.downsampling2(i_lr[2:3, 2:3, 2:3, :], 0.5)[:2 ,:2 ,:2 , :]
+        c_hr_initial = mapl.getC(i_hr_fake, gtab, radial_order=4)
         definition_fun = lambda toprint : define_problem_f1(
                                     c_lr,
                                     vhr,
@@ -306,6 +309,7 @@ def solveMin_fitCosnt(name_parameter, bsize, subject,i,j,k, loader_func, G, inte
                                     M, U,tau,
                                     gtab,
                                     scale,
+                                    c_hr_initial=c_hr_initial,
                                     intercept=intercept,
                                     toprint=toprint)
     else:
@@ -387,9 +391,6 @@ def try_value(name_parameter, bsize, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun
         #print cvxChr.size, (Nx, Ny, Nz, Nc)
         C = np.zeros((Nx, Ny, Nz, Nc), dtype='float32')
     
-
-    print id(cvxChr),'@@@@@@@ C.mean=',  C.mean()
-
     if 'cvxYhr' in variables :
         print 'Tomando cvxYhr'
         cvxYhr = variables['cvxYhr']
@@ -514,7 +515,7 @@ rm.add_data('bsize', bsizes)
 # Optional
 if IS_NEF :
     try:
-        description = str(sys.argv[5])
+        description = str(sys.argv[6])
         rm.add_data('description', description)        
     except IndexError:
         pass
@@ -536,7 +537,7 @@ rm.save()
 
 ## Patchs dimensions
 m=2
-size=2
+size=6
 x0, y0, z0 = 94, 82, 94
 b0s=4
 
@@ -607,8 +608,9 @@ print 'gtab.bvals.shape', gtab.bvals.shape
 b1000_index = indexs(gtab.bvals, 1000)
 b2000_index = indexs(gtab.bvals, 2000)
 b3000_index = indexs(gtab.bvals, 3000)
-for bsize in bsizes:
-    A = reconstructed[bsize]
+for i_val in xrange(len(rango)):
+    val = rango[i_val]
+    A = reconstructed[val]
     
     _mse = ((A-i_hr[:,:,:, :A.shape[3]])**2).mean()
     print bsize, 'mse=', _mse, mse
