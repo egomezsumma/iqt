@@ -342,7 +342,8 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     
     print 'Setting original in:',i-x0,(i-x0)+m, j-y0,(j-y0)+m, k-z0,(k-z0)+m 
     original[i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = i_hr
-
+    original_fake[i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = i_hr_fake
+    #del(i_hr_fake)
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
     return seg, gtab
 
@@ -553,6 +554,7 @@ b0s=4
 
 ## HR original and reconstructed
 original = np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')
+original_fake = np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')
 reconstructed = dict((val, np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')) for val in rango)
 
 # las dim de las HCP son (12*12, 14*12, 12*12) masomenos
@@ -604,6 +606,8 @@ for i, j, k in it: # aca deberia incrementar de a m los i,j,k(de la hr-img)
 if group_number_job == fit_index_job:
     print '$$ saving original image of group', group_number_job, 'in', rm.get_dir() + 'i_hr_g%d' % (group_number_job)
     np.save(rm.get_dir() + 'i_hr_g%d' % (group_number_job), original)
+    print '$$ saving original_fake image of group', group_number_job, 'in', rm.get_dir() + 'i_hr_fake_g%d' % (group_number_job)
+    np.save(rm.get_dir() + 'i_hr_fake_g%d' % (group_number_job), original_fake)
 
 
 ## Calculating mse's of all reconstructed dmri
