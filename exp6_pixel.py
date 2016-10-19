@@ -604,8 +604,8 @@ for i, j, k in it: # aca deberia incrementar de a m los i,j,k(de la hr-img)
 
 ## Saving the original image 
 if group_number_job == fit_index_job:
-    print '$$ saving original image of group', group_number_job, 'in', rm.get_dir() + 'i_hr_g%d' % (group_number_job)
-    np.save(rm.get_dir() + 'i_hr_g%d' % (group_number_job), original)
+    print '$$ saving original image of group', group_number_job, 'in', rm.get_dir() + 'i_hr_g%d_%d' % (group_number_job, subject)
+    np.save(rm.get_dir() + 'i_hr_g%d_%d' % (group_number_job, subject), original)
     print '$$ saving original_fake image of group', group_number_job, 'in', rm.get_dir() + 'i_hr_fake_g%d' % (group_number_job)
     np.save(rm.get_dir() + 'i_hr_fake_g%d' % (group_number_job), original_fake)
 
