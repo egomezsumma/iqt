@@ -89,23 +89,22 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,c_hr_initial=Non
     ## Fidelity expression
     cvxG = G
     fidelity_list = []
-    lapace_list = []
     for c in xrange(Nc):
         c_offset_hr = c*vhr
         Chr_c = cvxChr[c_offset_hr:c_offset_hr+vhr]
-        # Aprovecho para setearle un valor unicia
+
         Gc = cvx.Constant(G[c])
         Clr_c = cvx.Constant(Clr[c])
-        #Clr_c = cvx.Variable(Clr[c].shape[0], Clr[c].shape[1], name='Clr_'+str(c))
 
-        #       Gc:(216:vlr, 1728:vhr) Chr_c:(1728:vhr, 1) Clr_c:(1, 216:vlr)
+        # Gc:(216:vlr, 1728:vhr) Chr_c:(1728:vhr, 1) Clr_c:(1, 216:vlr)
         if intercept is not None:
             cvxInt_c = cvx.Constant(intercept[c])
-            #cvxInt_c:(vlr, 1)
+            # cvxInt_c:(vlr, 1)
             fid_b = cvx.sum_squares((Gc * Chr_c + cvxInt_c) - Clr_c)
-            #fid_b = cvx.sum_squares((Gc*Chr_c+cvxInt_c) - Clr_c.T)
+            # fid_b = cvx.sum_squares((Gc*Chr_c+cvxInt_c) - Clr_c.T)
         else:
             fid_b = cvx.sum_squares(Gc*Chr_c - Clr_c)
+
         fidelity_list.append(fid_b)
     print '#fidelity_list', len(fidelity_list)
     cvxFidelityExp = sum(fidelity_list)
@@ -166,7 +165,7 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,c_hr_initial=Non
     # Form and solve problem.
     prob = cvx.Problem(obj, constraints)
     
-    return prob, cvxFidelityExp ,  cvxLaplaceRegExp , cvxNorm1
+    return prob, cvxFidelityExp ,  cvxLaplaceRegExp , cvxNorm1, cvxYhr
 
 def find_closest_b(b, list_of_bs):
     dif = np.abs(b-list_of_bs[0])
@@ -297,7 +296,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     definition_fun = None
     if FORMULA == FORMULA_NO1 :
         # Get input for the subject to fit
-        _, c_lr, gtab, i_hr, i_lr = samples.get_sample_of_mapl_pixel(subject,i,j,k, loader_func, bsize=BSIZE, scale=SCALE)
+        _, c_lr, gtab, i_hr, i_lr = samples.get_sample_of_mapl_pixel(subject, i,j,k, loader_func, bsize=BSIZE, scale=SCALE)
         c_lr = samples.split_by(c_lr)
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
@@ -334,9 +333,10 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     seg = 0
     """ Sequencial"""
     for val in the_range :
-        A, seg = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun)
+        A, seg, B = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun)
         print 'Setting reconstructed of', name_parameter, '=', val, 'in:',i-x0,(i-x0)+m, j-y0,(j-y0)+m, k-z0,(k-z0)+m   
         reconstructed[val][i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = A
+        reconstructed2[val][i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = B
         del(A)
         seg += seg
     
@@ -351,7 +351,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
 def try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun):
     print '****before define problem val=', val, '    ',  datetime.datetime.now()
     prob = None
-    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun(name_parameter+'='+str(val))
+    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1, cvxYhr = definition_fun(name_parameter+'='+str(val))
     print 'id(prob)', id(prob)
 
     parameters = dict( (v.name(), v) for v in prob.parameters())
@@ -407,12 +407,16 @@ def try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun):
         print 'Tomando M*C'
         A = M.dot(C.reshape((Nx*Ny*Nz, Nc), order='F').T).T
         A = A.reshape((Nx, Ny, Nz, Nb), order='F')
+        if cvxYhr.value is not None:
+            B = np.asarray(cvxYhr.value, dtype='float32').reshape((Nx, Ny, Nz, Nb), order='F')
+        else:
+            B = np.zeros((Nx, Ny, Nz, Nb), dtype='float32')
 
     del (C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
     print t3, '.', datetime.datetime.now()
     print t3, 'A.shape=', A.shape
 
-    return A, seg
+    return A, seg, B
 
 
 def indexs(a, val):
@@ -509,6 +513,8 @@ else:
 # - Hacer el upsampling y desp calcular Chr (lito)
 # - grabar en un json o algo de que pedazo, de que sujeto, de que valor de parm dio unbounded
 # - (futuro) si da unbounded poner la upsampleada
+# - probar con intercept
+
 
 ## Save the job descriptor
 exp_name = 'exp6pixel'
@@ -556,6 +562,8 @@ b0s=4
 original = np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')
 original_fake = np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')
 reconstructed = dict((val, np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')) for val in rango)
+reconstructed2 = dict((val, np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')) for val in rango)
+
 
 # las dim de las HCP son (12*12, 14*12, 12*12) masomenos
 it = d.DmriPatchIterator(range(x0, x0+m*size, m), range(y0, y0+m*size, m), range(z0, z0+m*size, m))
@@ -622,6 +630,7 @@ b3000_index = indexs(gtab.bvals, 3000)
 for i_val in xrange(len(rango)):
     val = rango[i_val]
     A = reconstructed[val]
+    B = reconstructed2[val]
     
     _mse = ((A-i_hr)**2).mean()
     print val, 'mse=', _mse, mse
@@ -644,6 +653,8 @@ for i_val in xrange(len(rango)):
     if group_number_job == fit_index_job:
         print '$$ saving recontructed image of group', group_number_job, 'in', rm.get_dir() + 'A_g%d_val%d' % (group_number_job, i_val)
         np.save(rm.get_dir() + 'A_g%d_val%d' % (group_number_job, i_val), A)
+        print '$$ saving recontructed image of group', group_number_job, 'in', rm.get_dir() + 'B_g%d_val%d' % (group_number_job, i_val)
+        np.save(rm.get_dir() + 'B_g%d_val%d' % (group_number_job, i_val), B)
 
 
 ## Saving mse's
