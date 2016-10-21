@@ -9,6 +9,7 @@ import load.samples as samples
 import sys
 #import gc
 import datetime
+from utils.persistance.ResultManager import ResultManager
 
 #from threading import Thread, Lock
 #from multiprocessing import Pool
@@ -51,9 +52,11 @@ import optimization.tvnorm3d as tvn
 # 
 # $ \min_{C^{hr}} \{ ||GC^{hr} - C^{lr}||^2  + ||C||_{1} \}$
 # 
+from utils import img_utils
+
 
 # In[5]:
-def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None, toprint=''):
+def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,c_hr_initial=None, intercept=None, toprint=''):
     Nx, Ny, Nz = (12, 12, 12)#TODO: pasar
     Nb, Nc = M.shape
 
@@ -65,36 +68,47 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None,
     #cvxChr = cvx.Constant(C_hr.reshape(-1, order='F'))
     
     cvxChr = cvx.Variable(vhr*Nc, name='cvxChr')
-    ChrValueInitial = np.ones((vhr*Nc, 1), dtype='float32')
-    for c in xrange(Nc): 
-        c_offset_hr = c*vhr
-        ChrValueInitial[c_offset_hr:c_offset_hr+vhr] = ChrValueInitial[c_offset_hr:c_offset_hr+vhr]*Clr[c].mean()
-    cvxChr.value = ChrValueInitial
-    
+    if c_hr_initial is None:
+        ChrValueInitial = np.ones((vhr*Nc, 1), dtype='float32')
+        for c in xrange(Nc): 
+            c_offset_hr = c*vhr
+            #import pdb; pdb.set_trace()
+            # nose porque me hace un borde de 1 si no es par el original
+            upsampling = img_utils.downsampling2(Clr[c].reshape((nx, ny, nz)), 0.5)[1:-1, 1:-1, 1:-1]
+            print 'upsampling.shape', upsampling.shape
+            # solo el centro
+            upsampling = upsampling[4:6, 4:6, 4:6]
+            #ChrValueInitial[c_offset_hr:c_offset_hr+vhr] = ChrValueInitial[c_offset_hr:c_offset_hr+vhr]*Clr[c].mean()
+            print ChrValueInitial[c_offset_hr:c_offset_hr+vhr].shape, upsampling.reshape((Nx*Ny*Nz,1), order='F').shape
+            ChrValueInitial[c_offset_hr:c_offset_hr+vhr] = upsampling.reshape((Nx*Ny*Nz,1), order='F')
+        cvxChr.value = ChrValueInitial
+    else:
+        import pdb; pdb.set_trace()
+        cvxChr.value = c_hr_initial.reshape(-1, order='F')
+
     ## Fidelity expression
     cvxG = G
     fidelity_list = []
-    lapace_list = []
     for c in xrange(Nc):
         c_offset_hr = c*vhr
         Chr_c = cvxChr[c_offset_hr:c_offset_hr+vhr]
-        # Aprovecho para setearle un valor unicia
+
         Gc = cvx.Constant(G[c])
         Clr_c = cvx.Constant(Clr[c])
-        #Clr_c = cvx.Variable(Clr[c].shape[0], Clr[c].shape[1], name='Clr_'+str(c))
 
-        #       Gc:(216:vlr, 1728:vhr) Chr_c:(1728:vhr, 1) Clr_c:(1, 216:vlr)
+        # Gc:(216:vlr, 1728:vhr) Chr_c:(1728:vhr, 1) Clr_c:(1, 216:vlr)
         if intercept is not None:
             cvxInt_c = cvx.Constant(intercept[c])
-            #cvxInt_c:(vlr, 1)
+            # cvxInt_c:(vlr, 1)
             fid_b = cvx.sum_squares((Gc * Chr_c + cvxInt_c) - Clr_c)
-            #fid_b = cvx.sum_squares((Gc*Chr_c+cvxInt_c) - Clr_c.T)
+            # fid_b = cvx.sum_squares((Gc*Chr_c+cvxInt_c) - Clr_c.T)
         else:
             fid_b = cvx.sum_squares(Gc*Chr_c - Clr_c)
+
         fidelity_list.append(fid_b)
     print '#fidelity_list', len(fidelity_list)
     cvxFidelityExp = sum(fidelity_list)
-    
+
     ## Laplacian regularization
     cvxU = cvx.Constant(U)
     regLaplade_list = []
@@ -106,10 +120,11 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None,
     
     
     ## 3D Tv-Norm Regularization
+    cvxM = cvx.Constant(M)
     cvxC_byCoef = cvx.reshape(cvxChr, vhr, Nc)
     # (Nb,Nc)*(Nc,vhr) = (Nb, vhr).T = (vhr, Nb) 
-    cvxYhr = cvx.reshape((M*cvxC_byCoef.T).T, vhr*Nb, 1)
-    print 'defining cvx3DTvNomExp'
+    cvxYhr = cvx.reshape((cvxM*cvxC_byCoef.T).T, vhr*Nb, 1)
+    print 'defining cvx3DTvNomExp', cvxYhr.size,Nx, Ny, Nz, Nb
     cvx3DTvNomExp = tvn.tv3d(cvxYhr, Nx, Ny, Nz, Nb)
     
     
@@ -162,7 +177,6 @@ def find_closest_b(b, list_of_bs):
     return closest
 
 
-# def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale, intercept=None):
 def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=None):
     Nb, Nc = M.shape
     Nx, Ny, Nz, bval = i_hr_shape
@@ -276,6 +290,7 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
 
     return prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1
 
+import mymapl.minmapl as mapl
 # In[6]:
 def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, intercept=None, scale=2, verbose=False, prob=None):
 
@@ -286,7 +301,9 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
         c_lr = samples.split_by(c_lr)
         # Mapl params
         M, tau, mu, U = mapl.get_mapl_params2(gtab, radial_order=4)
-
+        i_hr_fake = img_utils.downsampling2(i_lr, 0.5)
+        print i_hr_fake.shape
+        c_hr_initial = mapl.getC(i_hr_fake, gtab, radial_order=4)
         definition_fun = lambda toprint : define_problem_f1(
                                     c_lr,
                                     vhr,
@@ -295,6 +312,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
                                     M, U,tau,
                                     gtab,
                                     scale,
+                                    c_hr_initial=c_hr_initial,
                                     intercept=intercept,
                                     toprint=toprint)
     else:
@@ -344,69 +362,6 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
     return None, None, seg, None, None, None, None, info
 
-    """Multiprocess
-
-    params = [(name_parameter, val,i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose) for val in the_range]
-    all_together = None
-    long = len(the_range)
-    p = Pool(long)
-    all_together = p.map(try_value, params)
-    for i in xrange(len(the_range)):
-        res = all_together[i]
-        info['mse'].append(res[0])
-        info['mse1000'].append(res[1])
-        info['mse2000'].append(res[2])
-        info['mse3000'].append(res[3])
-        seg += res[4]
-    print t3, 'fin fit al values for subject:', subject, 'segs:', seg, datetime.datetime.now()
-    # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
-    return None, None, seg, None, None, None, None, info
-    """
-    """Multithreads
-
-    threads = [None]*len(the_range)
-    results = [(None, None, None, None)]*len(the_range)
-
-    params = [
-        (name_parameter, the_range[i], i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters, verbose, i, results)
-        for i in xrange(len(the_range))]
-
-    print 'Antes de crear threads'
-    for i in xrange(len(params)):
-        t = Thread(target=try_value, args=params[i])
-        threads[i] = t
-        print 'starting job', i , 'with val=', the_range[i]
-        t.start()
-
-    print 'A esperar que terminen'
-    some_one_is_alive = True
-    while some_one_is_alive :
-        ala = 1*2
-        some_one_is_alive = False
-        for i in range(len(params)):
-            if threads[i].isAlive():
-                some_one_is_alive = True
-                break
-
-    for i in range(len(params)):
-        print 'joining thread ', i, ' with val=', the_range[i]
-        threads[i].join()
-
-    print 'antes de unir resultados'
-    print results
-    for i in xrange(len(the_range)):
-        res = results[i]
-        info['mse'].append(res[0])
-        info['mse1000'].append(res[1])
-        info['mse2000'].append(res[2])
-        info['mse3000'].append(res[3])
-        seg += res[4]
-
-    print t3, 'End of fit all values for subject:', subject, 'segs:', seg, datetime.datetime.now()
-    sys.stdout.flush()
-    # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
-    return None, None, seg, None, None, None, None, info
-    """
 def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters=1000, verbose=False, res=None):
     print '****before define problem val=', val, '    ',  datetime.datetime.now()
     prob = None
@@ -571,8 +526,37 @@ if IS_NEF :
 else:
     fit_index_job = 0
 
+if IS_NEF :
+    try:
+        id_job = int(sys.argv[5])
+    except IndexError:
+        raise 'Falta parametro 5 (id_job:int)'
+else:
+    id_job = 1234
 
-print 'STARTING JOB FOR', param_name, 'USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
+# Save the job descriptor
+exp_name = 'exp6pixel'
+rm = ResultManager(RES_BASE_FOLDER  , 
+                exp_name + '/' + formula_to_use + '/' + param_name,  
+                id_job)
+rm.add_data('params_range', dict((x[0], list(x[1])) for x in params_range.items()))
+rm.add_data('name_parameter', name_parameter)
+rm.add_data('formula', formula_to_use)
+rm.add_data('scale', SCALE)
+rm.add_data('intercept', INTERCEPT)
+rm.add_data('max_its', MAXIT_BY_ROUND)
+rm.add_data('rounds', ROUNDS)
+
+# Optional
+if IS_NEF :
+    try:
+        description = str(sys.argv[6])
+        rm.add_data('description', description)        
+    except IndexError:
+        pass
+
+
+print 'STARTING JOB', id_job,'FOR', param_name, 'USING FORMULA', FORMULA , ' GROUP-job:', group_number_job, 'FIT-index', fit_index_job,   datetime.datetime.now()
 print 'WITH RANGE:', rango
 print 'Intercept:', str(INTERCEPT)
 sys.stdout.flush()
@@ -581,6 +565,9 @@ sys.stdout.flush()
 
 GROUPS = n_samples/GROUP_SIZE
 RANGO= len(rango)
+
+rm.add_data('n_samples', n_samples)
+rm.save()
 
 """
 mse = np.zeros((RANGO, FITS, GROUPS), dtype='float32')
@@ -595,7 +582,8 @@ mse3000 = np.zeros((RANGO), dtype='float32')
 
 
 
-subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
+#subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
+
 
 it = d.DmriPatchIterator(range(8, 12, 12), range(7, 14, 14), range(8, 12, 12))
 for i, j, k in it:
@@ -681,12 +669,11 @@ sys.stdout.flush()
 #if base_folder is not None: 
 #    np.save(base_folder+ 'mins_alphas', mins_lamda)
 
-
-name = '%d_%d_%d' % (RANGO, FITS, GROUPS)
-base_name = base_folder + 'mse_g'+ str(group_number_job) +'_f'+str(fit_index_job)
+## Saving mse's
+base_name = rm.get_dir() + 'mse_g'+ str(group_number_job) +'_f'+str(fit_index_job)
 np.save(base_name, mse)
 print 'saved:', base_name
-base_name = base_folder + 'mse%d_g'+ str(group_number_job) +'_f'+str(fit_index_job)
+base_name = rm.get_dir() + 'mse%d_g'+ str(group_number_job) +'_f'+str(fit_index_job)
 np.save(base_name%(1000), mse1000)
 print 'saved:', base_name%(1000)
 np.save(base_name%(2000), mse2000)
@@ -695,16 +682,6 @@ np.save(base_name%(3000), mse3000)
 print 'saved:', base_name%(3000)
 
 
-mins_lamda = np.array(mins_lamda)
-print 'Subjects fitted = ', mins_lamda.shape
-print 'mean=', mins_lamda.mean(),  mins_lamda
-#plt.bar(xrange(mins_lamda.size), mins_lamda)
-#plt.savefig(base_folder + '/mins_' + param_name + '.pdf')
 
-# In[11]:
-print 'rangos:', rango
-print 'mins_%s:' % (param_name) , mins_lamda
-
-#dict((v.name(), v.value) for v in prob.variables())
 print 'Lito!', datetime.datetime.now()
 sys.stdout.flush()

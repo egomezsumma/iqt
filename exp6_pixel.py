@@ -511,9 +511,9 @@ else:
 
 #TODOS:
 # - Hacer el upsampling y desp calcular Chr (lito)
-# - grabar en un json o algo de que pedazo, de que sujeto, de que valor de parm dio unbounded
 # - (futuro) si da unbounded poner la upsampleada
-# - probar con intercept
+# - probar con intercept (da peor)
+# - probar con mas n_samples
 
 
 ## Save the job descriptor
@@ -544,7 +544,7 @@ print 'Intercept:', str(INTERCEPT)
 sys.stdout.flush()
 
 
-GROUPS = n_samples/GROUP_SIZE
+#GROUPS = n_samples/GROUP_SIZE
 RANGO= len(rango)
 
 rm.add_data('n_samples', n_samples)
@@ -565,19 +565,21 @@ reconstructed = dict((val, np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='
 reconstructed2 = dict((val, np.zeros((size*m, size*m, size*m, BSIZE-b0s), dtype='float32')) for val in rango)
 
 
+
+## Selecting group
+group_num = group_number_job
+subject_offset = GROUP_SIZE*group_number_job
+train_subjects = subjects[subject_offset:subject_offset+GROUP_SIZE]
+test_set = subjects[:subject_offset] + subjects[subject_offset+GROUP_SIZE:]
+test_set = test_set[:FITS]
+print 'len(test)', len(test_set), 'len(group)', len(train_subjects)
+
 # las dim de las HCP son (12*12, 14*12, 12*12) masomenos
 it = d.DmriPatchIterator(range(x0, x0+m*size, m), range(y0, y0+m*size, m), range(z0, z0+m*size, m))
 for i, j, k in it: # aca deberia incrementar de a m los i,j,k(de la hr-img)
     print 'Doing patch:', i, j, k
     
-    ## Selecting group
-    group_num = group_number_job
-    subject_offset = GROUP_SIZE*group_number_job
-    train_subjects = subjects[subject_offset:subject_offset+GROUP_SIZE]
-    test_set = subjects[:subject_offset] + subjects[subject_offset+GROUP_SIZE:]
-    test_set = test_set[:FITS]
-    print 'len(test)', len(test_set), 'len(group)', len(train_subjects)
-
+    
     ## Linear regresion of this group
     print
     print datetime.datetime.now()
@@ -587,11 +589,13 @@ for i, j, k in it: # aca deberia incrementar de a m los i,j,k(de la hr-img)
     print "== Training of Group:%d    (%d'%d'')"%(group_num, int(train_time/60), int(train_time%60)), datetime.datetime.now()
     sys.stdout.flush()
 
+    #print 'BREAKIN TO PROB'
+    #break
 
     ## Solving the problem
     subject = test_set[fit_index_job]
     print '/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/'
-    print t1, '== Group:%d of %d Fiting subject:%d(%d,%d,%d) of %d (%d)#' % (group_num, GROUPS, fit_index_job,i,j,k, FITS,  subject), datetime.datetime.now()
+    print t1, '== Group:%d of %d Fiting subject:%d(%d,%d,%d) of %d (%d)#' % (group_num, 5, fit_index_job,i,j,k, FITS,  subject), datetime.datetime.now()
     print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name), datetime.datetime.now()
     sys.stdout.flush()
     # Solve the proble for each value in rango for the current paramter (lamda, alpha ...) 
@@ -658,7 +662,6 @@ for i_val in xrange(len(rango)):
 
 
 ## Saving mse's
-name = '%d_%d_%d' % (RANGO, FITS, GROUPS)
 base_name = rm.get_dir() + 'mse_g'+ str(group_number_job) +'_f'+str(fit_index_job)
 np.save(base_name, mse)
 print 'saved:', base_name
