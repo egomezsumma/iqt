@@ -345,18 +345,24 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
 
    
     """ Sequencial"""
-    for val in the_range :
-        _mse, _mse1000, _mse2000, _mse3000, seg = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
+    for i_val in xrange(len(the_range)) :
+        val = the_range[i_val]
+        _mse, _mse1000, _mse2000, _mse3000, seg, A = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
         info['mse'].append(_mse)
         info['mse1000'].append(_mse1000)
         info['mse2000'].append(_mse2000)
         info['mse3000'].append(_mse3000)
         seg += seg
+
+        if group_number_job == fit_index_job:
+            print '$$ saving recontructed image of group', group_number_job, 'in', base_folder + 'A_g%d_val%d' % (group_number_job, i_val)
+            np.save(rm.get_dir() + 'A_g%d_val%d' % (group_number_job, i_val), A)
+
     print 'info[mse]', info['mse']
 
     if group_number_job == fit_index_job:
         print '$$ saving original image of group', group_number_job, 'in', base_folder + 'i_hr_g%d' % (group_number_job)
-        np.save(base_folder + 'i_hr_g%d' % (group_number_job), i_hr)
+        np.save(rm.get_dir() + 'i_hr_g%d' % (group_number_job), i_hr)
 
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
@@ -433,11 +439,8 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
     #info['mse3000'].append(mse3000)
 
 
-    if group_number_job == fit_index_job:
-        print '$$ saving recontructed image of group', group_number_job, 'in', base_folder + 'A_g%d_val%d' % (group_number_job, val)
-        np.save(base_folder + 'A_g%d_val%d' % (group_number_job, val), A)
-
-    del (A, C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
+    
+    del (C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
     print t3, '.', datetime.datetime.now()
     #sys.stdout.flush()
     print t3, '.', datetime.datetime.now()
@@ -447,7 +450,7 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
     if res is not None:
         res[i] = (_mse, _mse1000, _mse2000, _mse3000, seg)
 
-    return _mse, _mse1000, _mse2000, _mse3000, seg
+    return _mse, _mse1000, _mse2000, _mse3000, seg, A
 
 
 def indexs(a, val):
@@ -477,7 +480,12 @@ def params_for(subjects, i, j, k, sample_maker, bvals_needed=None):
     return G, intercept
     
 from conf_exp6 import *
-RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/exp6/'
+
+
+if IS_NEF :
+    RES_BASE_FOLDER = '/home/lgomez/workspace/iqt/results/'
+else:
+    RES_BASE_FOLDER = '/home/leexgo1987/Documentos/cs/inria/iqt/results'
 
 # ## Solving the problem and cross-validation (leave one out)
 
@@ -535,7 +543,7 @@ else:
     id_job = 1234
 
 # Save the job descriptor
-exp_name = 'exp6pixel'
+exp_name = 'exp6'
 rm = ResultManager(RES_BASE_FOLDER  , 
                 exp_name + '/' + formula_to_use + '/' + param_name,  
                 id_job)
