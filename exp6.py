@@ -10,6 +10,7 @@ import sys
 #import gc
 import datetime
 from utils.persistance.ResultManager import ResultManager
+import warnings
 
 #from threading import Thread, Lock
 #from multiprocessing import Pool
@@ -83,7 +84,6 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,c_hr_initial=Non
             ChrValueInitial[c_offset_hr:c_offset_hr+vhr] = upsampling.reshape((Nx*Ny*Nz,1), order='F')
         cvxChr.value = ChrValueInitial
     else:
-        import pdb; pdb.set_trace()
         cvxChr.value = c_hr_initial.reshape(-1, order='F')
 
     ## Fidelity expression
@@ -354,6 +354,8 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
         info['mse3000'].append(_mse3000)
         seg += seg
 
+        raise_warning_last_equal_result(info)
+
         if group_number_job == fit_index_job:
             print '$$ saving recontructed image of group', group_number_job, 'in', base_folder + 'A_g%d_val%d' % (group_number_job, i_val)
             np.save(rm.get_dir() + 'A_g%d_val%d' % (group_number_job, i_val), A)
@@ -367,6 +369,30 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
     # return A, C, seg, prob, cvxFidelityExp, cvxLaplaceRegExp , cvxNorm1, info
     return None, None, seg, None, None, None, None, info
+
+def raise_warning_last_equal_result(info, the_range, name_parameter):
+    last = len(info['mse']) - 1
+    if  last > 1 :
+        for sufijo in ['', '1000', '2000', '3000']:
+            if info['mse' + sufijo][last] == info['mse'][last-1] :
+                text = '***** info[mse] de param %s con valor %d y %d dan igual (%d)'%(name_parameter,the_range[last], the_range[last-1], info['mse'][last])
+                warnings.warn(text)
+                print text
+
+def raise_warning_all_equal(res):
+    for sufijo in ['', '1000', '2000', '3000']:
+        current = res['mse' + sufijo]
+        all_equal = True
+        for i in xrange(len(current) - 1):
+            if current[i] != current[i + 1]:
+                all_equal = False
+                break
+
+        if all_equal:
+            text = '***** mse' + sufijo + ' todos los valores iguales'
+            warnings.warn(text)
+            print text
+
 
 def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters=1000, verbose=False, res=None):
     print '****before define problem val=', val, '    ',  datetime.datetime.now()
@@ -407,14 +433,18 @@ def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b200
     #sys.stdout.flush()
 
     # Get result
+    variables = None
     variables = dict( (v.name(), v) for v in prob.variables())
 
     cvxChr = variables['cvxChr']
+    C = None
     C = np.asarray(cvxChr.value, dtype='float32').reshape((Nx, Ny, Nz, Nc), order='F')
     print id(cvxChr),'@@@@@@@ C.mean=',  C.mean()
 
+    A = None
     if 'cvxYhr' in variables :
         print 'Tomando cvxYhr'
+        cvxYhr = None
         cvxYhr = variables['cvxYhr']
         A = np.asarray(cvxYhr.value, dtype='float32').reshape((Nx, Ny, Nz, Nb), order='F')
     else:
@@ -635,6 +665,8 @@ for i, j, k in it:
             mse1000[:] = res['mse1000']
             mse2000[:] = res['mse2000']
             mse3000[:] = res['mse3000']
+
+            raise_warning_all_equal(res)
 
             # Keeping the parameter value of each fitting that produce the min-mse (of all the val tested for the subjetc)
             index = np.argmin(np.array(res['mse']))
