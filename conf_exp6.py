@@ -28,6 +28,13 @@ params_range = {
     'gamma': np.arange(1.0e-15, 1,0.0999999999999999)#10
 }
 
+DEFAULT_PARAMETERS = {
+    'lamda': 1.,
+    'beta': 1.452e-15,
+    'alpha': 1.627e-15,
+    'gamma': 1.0e-15
+}
+
 
 voi_hr_shape = (12, 12, 12, 6)
 voi_lr_shape = (6, 6, 6, 6)

@@ -57,7 +57,7 @@ from utils import img_utils
 
 
 # In[5]:
-def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,c_hr_initial=None, intercept=None, toprint=''):
+def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,parameters, c_hr_initial=None, intercept=None, toprint=''):
     Nx, Ny, Nz = (12, 12, 12)#TODO: pasar
     Nb, Nc = M.shape
 
@@ -133,13 +133,15 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,c_hr_initial=Non
     
     
     ## Mapl weight
-    beta = cvx.Parameter(value=1.452e-15, name='beta', sign='positive')#3.197e-10
+    beta = cvx.Parameter(value=parameters['beta'], name='beta', sign='positive')#3.197e-10
     ## Sparcity weight
-    alpha = cvx.Parameter(value=1.627e-15, name='alpha', sign='positive')#4.865e-10
+    alpha = cvx.Parameter(value=parameters['alpha'], name='alpha', sign='positive')#4.865e-10
     ## Tv-norm weight
-    gamma = cvx.Parameter(value=1.0e-15, name='gamma',sign='positive')
+    gamma = cvx.Parameter(value=parameters['gamma'], name='gamma',sign='positive')
     ## Fidelity weight
-    lamda = cvx.Parameter(value=1., name='lamda',sign='positive')
+    lamda = cvx.Parameter(value=parameters['lamda'], name='lamda',sign='positive')
+
+
 
     ### AS VARIABLES
     # beta = cvx.Variable(name='beta')
@@ -292,7 +294,7 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
 
 import mymapl.minmapl as mapl
 # In[6]:
-def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, intercept=None, scale=2, verbose=False, prob=None):
+def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, parameters, intercept=None, scale=2, verbose=False, prob=None):
 
     definition_fun = None
     if FORMULA == FORMULA_NO1 :
@@ -304,7 +306,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
         i_hr_fake = img_utils.downsampling2(i_lr, 0.5)
         print i_hr_fake.shape
         c_hr_initial = mapl.getC(i_hr_fake, gtab, radial_order=4)
-        definition_fun = lambda toprint : define_problem_f1(
+        definition_fun = lambda toprint, the_parameters : define_problem_f1(
                                     c_lr,
                                     vhr,
                                     vlr,
@@ -312,6 +314,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
                                     M, U,tau,
                                     gtab,
                                     scale,
+                                    the_parameters,
                                     c_hr_initial=c_hr_initial,
                                     intercept=intercept,
                                     toprint=toprint)
@@ -347,7 +350,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     """ Sequencial"""
     for i_val in xrange(len(the_range)) :
         val = the_range[i_val]
-        _mse, _mse1000, _mse2000, _mse3000, seg, A = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
+        _mse, _mse1000, _mse2000, _mse3000, seg, A = try_value(name_parameter, val,parameters, i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
         info['mse'].append(_mse)
         info['mse1000'].append(_mse1000)
         info['mse2000'].append(_mse2000)
@@ -394,15 +397,16 @@ def raise_warning_all_equal(res):
             print text
 
 
-def try_value(name_parameter, val, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters=1000, verbose=False, res=None):
+def try_value(name_parameter, val, parameters, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun, max_iters=1000, verbose=False, res=None):
     print '****before define problem val=', val, '    ',  datetime.datetime.now()
+    parameters[name_parameter] = val
     prob = None
-    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun(name_parameter+'='+str(val))
+    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun(name_parameter+'='+str(val), parameters)
     print 'id(prob)', id(prob)
 
-    parameters = dict( (v.name(), v) for v in prob.parameters())
-    parameters[name_parameter].value = val
-    print t3, 'setting new ', name_parameter, '=',  parameters[name_parameter].value, '    ', datetime.datetime.now()
+    #parameters = dict( (v.name(), v) for v in prob.parameters())
+
+    print t3, 'setting new ', name_parameter, '=',  parameters[name_parameter], '    ', datetime.datetime.now()
     sys.stdout.flush()
 
     max_its = MAXIT_BY_ROUND
@@ -618,9 +622,9 @@ mse1000 = np.zeros((RANGO), dtype='float32')
 mse2000 = np.zeros((RANGO), dtype='float32')
 mse3000 = np.zeros((RANGO), dtype='float32')
 
+import copy
 
-
-#subjects = subjects[GROUP_SIZE:] + subjects[:GROUP_SIZE]
+parameters = copy.copy(DEFAULT_PARAMETERS)
 
 
 it = d.DmriPatchIterator(range(8, 12, 12), range(7, 14, 14), range(8, 12, 12))
@@ -656,6 +660,7 @@ for i, j, k in it:
                                   i, j, k,
                                   loader_func,
                                   G,
+                                  parameters,
                                   intercept=intercept,
                                   scale=SCALE,
                                   verbose=False)
