@@ -575,7 +575,7 @@ test_set = test_set[:FITS]
 print 'len(test)', len(test_set), 'len(group)', len(train_subjects)
 
 # las dim de las HCP son (12*12, 14*12, 12*12) masomenos
-it = d.DmriPatchIterator(range(x0, x0+m*size, m), range(y0, y0+m*size, m), range(z0, z0+m*size, m))
+it = d.DmriPatchIterator(range(x0, x0+size, 1), range(y0, y0+size, 1), range(z0, z0+size, 1))
 for i, j, k in it: # aca deberia incrementar de a m los i,j,k(de la hr-img)
     print 'Doing patch:', i, j, k
     
