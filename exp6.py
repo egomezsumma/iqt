@@ -357,7 +357,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
         info['mse3000'].append(_mse3000)
         seg += seg
 
-        raise_warning_last_equal_result(info)
+        raise_warning_last_equal_result(info, the_range, name_parameter)
 
         if group_number_job == fit_index_job:
             print '$$ saving recontructed image of group', group_number_job, 'in', base_folder + 'A_g%d_val%d' % (group_number_job, i_val)
