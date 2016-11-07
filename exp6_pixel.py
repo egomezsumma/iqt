@@ -22,6 +22,7 @@ from utils.persistance.ResultManager import ResultManager
 
 t1, t2, t3, t4 = ' '*4,' '*8, ' '*12, ' '*16
 
+print 'PROBANDO: correcion de corrimiento de ventana'
 
 IS_NEF = '/home/lgomez/' in sys.prefix
 
@@ -335,14 +336,14 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     for val in the_range :
         A, seg, B = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun)
         print 'Setting reconstructed of', name_parameter, '=', val, 'in:',i-x0,(i-x0)+m, j-y0,(j-y0)+m, k-z0,(k-z0)+m   
-        reconstructed[val][i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = A
-        reconstructed2[val][i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = B
+        reconstructed[val][(i-x0)*m:(i-x0+1)*m, (j-y0)*m:(j-y0+1)*m, (k-z0)*m:(k-z0+1)*m] = A
+        reconstructed2[val][(i-x0)*m:(i-x0+1)*m, (j-y0)*m:(j-y0+1)*m, (k-z0)*m:(k-z0+1)*m] = B
         del(A)
         seg += seg
     
-    print 'Setting original in:',i-x0,(i-x0)+m, j-y0,(j-y0)+m, k-z0,(k-z0)+m 
-    original[i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = i_hr
-    original_fake[i-x0:(i-x0)+m, j-y0:(j-y0)+m, k-z0:(k-z0)+m] = i_hr_fake
+    print 'Setting original in:',(i-x0)*m,(i-x0+1)*m, (j-y0)*m,(j-y0+1)*m, (k-z0)*m,(k-z0+1)*m
+    original[(i-x0)*m:(i-x0+1)*m, (j-y0)*m:(j-y0+1)*m, (k-z0)*m:(k-z0+1)*m] = i_hr
+    original_fake[(i-x0)*m:(i-x0+1)*m, (j-y0)*m:(j-y0+1)*m, (k-z0)*m:(k-z0+1)*m] = i_hr_fake
     #del(i_hr_fake)
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
     return seg, gtab
