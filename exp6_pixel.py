@@ -335,7 +335,7 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     """ Sequencial"""
     for val in the_range :
         A, seg, B = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun)
-        print 'Setting reconstructed of', name_parameter, '=', val, 'in:',i-x0,(i-x0)+m, j-y0,(j-y0)+m, k-z0,(k-z0)+m   
+        print 'Setting reconstructed of', name_parameter, '=', val, 'in:',(i-x0)*m,(i-x0+1)*m, (j-y0)*m,(j-y0+1)*m, (k-z0)*m,(k-z0+1)*m
         reconstructed[val][(i-x0)*m:(i-x0+1)*m, (j-y0)*m:(j-y0+1)*m, (k-z0)*m:(k-z0+1)*m] = A
         reconstructed2[val][(i-x0)*m:(i-x0+1)*m, (j-y0)*m:(j-y0+1)*m, (k-z0)*m:(k-z0+1)*m] = B
         del(A)
