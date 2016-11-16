@@ -50,6 +50,23 @@ else:
     #subjects = [100307, 100408, 180129, 180432]
 
 
+subjects = sorted(subjects)
+
+subjects_to_exclude = [
+    101006,
+    108121,
+    108323,
+    105115
+]
+
+print 'subjects before exclude:',len(subjects)
+
+for s in subjects_to_exclude :
+    subjects.remove(s)
+
+print 'subjects after exclude:',len(subjects)
+
+
 FITS =10#11
 GROUP_SIZE=8
 

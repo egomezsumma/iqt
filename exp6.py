@@ -155,8 +155,9 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,parameters, c_hr
     # lamda.value =0.5
     
     # Form objective.
-    obj  = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
-    #obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1)
+    #obj = cvx.Minimize(        lamda * cvxFidelityExp + beta * cvxLaplaceRegExp + alpha * cvx.norm(cvxChr) + gamma * cvx3DTvNomExp)
+    #obj  = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1 + gamma*cvx3DTvNomExp)
+    obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1)
          
     # Constraints
     constraints = []
@@ -166,8 +167,9 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,parameters, c_hr
 
     # Form and solve problem.
     prob = cvx.Problem(obj, constraints)
-    
-    return prob, cvxFidelityExp ,  cvxLaplaceRegExp , cvxNorm1
+
+
+    return prob, cvxFidelityExp ,  cvxLaplaceRegExp , cvxNorm1, cvx3DTvNomExp
 
 def find_closest_b(b, list_of_bs):
     dif = np.abs(b-list_of_bs[0])
@@ -264,6 +266,8 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
     lamda = cvx.Parameter(value=1., name='lamda', sign='positive')
     ## 3D-Tv weight
     gamma = cvx.Parameter(value=1.0e-15, name='gamma', sign='positive')
+    ## Map dual expresion
+    rho = cvx.Parameter(value=1.0, name='rho', sign='positive')
     ### AS VARIABLES
     # beta = cvx.Variable(name='beta')
     # beta.value = 0.2
@@ -277,10 +281,10 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
 
     # Form objective.
     # obj = cvx.Minimize(cvxFidelityExp + betha*cvxLapaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
-    #obj = cvx.Minimize(
-    #    lamda * cvxFidelityExp + cvxMaplDualExp + beta * cvxLaplaceRegExp + alpha * cvxNorm1 + gamma * cvx3DTvNomExp)
     obj = cvx.Minimize(
-        lamda * cvxFidelityExp + cvxMaplDualExp + beta * cvxLaplaceRegExp + alpha * cvxNorm1)
+       lamda * cvxFidelityExp + rho * cvxMaplDualExp + beta * cvxLaplaceRegExp + alpha * cvxNorm1 + gamma * cvx3DTvNomExp)
+    #obj = cvx.Minimize(
+    #    lamda * cvxFidelityExp + cvxMaplDualExp + beta * cvxLaplaceRegExp + alpha * cvxNorm1)
 
     # Constraints
     # constraints = [lamda > 0 , alpha > 0, beta > 0]
@@ -290,7 +294,7 @@ def define_problem_f2(i_lr, i_hr_shape, G, M, U, tau, gtab, scale, intercept=Non
     # Form and solve problem.
     prob = cvx.Problem(obj, constraints)
 
-    return prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1
+    return prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1, cvxMaplDualExp, cvx3DTvNomExp
 
 import mymapl.minmapl as mapl
 # In[6]:
@@ -350,11 +354,20 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     """ Sequencial"""
     for i_val in xrange(len(the_range)) :
         val = the_range[i_val]
-        _mse, _mse1000, _mse2000, _mse3000, seg, A = try_value(name_parameter, val,parameters, i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
+        _mse, _mse1000, _mse2000, _mse3000, seg, A, \
+        cvxFidelityExp_val,  cvxLaplaceRegExp_val, \
+        cvxNorm1_val, cvx3DTvNomExp_val = try_value(name_parameter, val,parameters, i_hr, M, Nx, Ny, Nz, Nb, Nc, b1000_index, b2000_index, b3000_index, definition_fun)
         info['mse'].append(_mse)
         info['mse1000'].append(_mse1000)
         info['mse2000'].append(_mse2000)
         info['mse3000'].append(_mse3000)
+
+        info['cvxFidelityExp'].append(cvxFidelityExp_val)
+        info['cvxLaplaceRegExp'].append(cvxLaplaceRegExp_val)
+        info['cvxNorm1'].append(cvxNorm1_val)
+        info['cvx3DTvNomExp'].append(cvx3DTvNomExp_val)
+
+
         seg += seg
 
         raise_warning_last_equal_result(info, the_range, name_parameter)
@@ -401,7 +414,7 @@ def try_value(name_parameter, val, parameters, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000
     print '****before define problem val=', val, '    ',  datetime.datetime.now()
     parameters[name_parameter] = val
     prob = None
-    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1 = definition_fun(name_parameter+'='+str(val), parameters)
+    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1, cvx3DTvNomExp = definition_fun(name_parameter+'='+str(val), parameters)
     print 'id(prob)', id(prob)
 
     #parameters = dict( (v.name(), v) for v in prob.parameters())
@@ -426,6 +439,9 @@ def try_value(name_parameter, val, parameters, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000
 
         if cvxNorm1 is not None:
             print t3, '>cvxNorm1', cvxNorm1.value, datetime.datetime.now()
+
+        if cvx3DTvNomExp is not None:
+            print t3, '>cvx3DTvNomExp', cvx3DTvNomExp.value, datetime.datetime.now()
 
         sys.stdout.flush()
 
@@ -456,6 +472,21 @@ def try_value(name_parameter, val, parameters, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000
         A = M.dot(C.reshape((Nx*Ny*Nz, Nc), order='F').T).T
         A = A.reshape((Nx, Ny, Nz, Nb), order='F')
 
+    cvxFidelityExp_val = -1
+    if cvxFidelityExp is not None:
+        cvxFidelityExp_val = cvxFidelityExp.value
+
+    cvxLaplaceRegExp_val = -1
+    if cvxLaplaceRegExp is not None:
+        cvxLaplaceRegExp_val = cvxLaplaceRegExp.value
+
+    cvxNorm1_val = -1
+    if cvxNorm1 is not None:
+        cvxNorm1_val = cvxNorm1.value
+
+    cvx3DTvNomExp_val = -1
+    if cvx3DTvNomExp is not None:
+        cvx3DTvNomExp_val = cvx3DTvNomExp.value
 
     _mse = ((A-i_hr)**2).mean()
     #info['mse'].append(mse)
@@ -472,9 +503,8 @@ def try_value(name_parameter, val, parameters, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000
     _mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
     #info['mse3000'].append(mse3000)
 
-
     
-    del (C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
+    del (C, prob)
     print t3, '.', datetime.datetime.now()
     #sys.stdout.flush()
     print t3, '.', datetime.datetime.now()
@@ -484,7 +514,7 @@ def try_value(name_parameter, val, parameters, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000
     if res is not None:
         res[i] = (_mse, _mse1000, _mse2000, _mse3000, seg)
 
-    return _mse, _mse1000, _mse2000, _mse3000, seg, A
+    return _mse, _mse1000, _mse2000, _mse3000, seg, A, cvxFidelityExp_val,  cvxLaplaceRegExp_val, cvxNorm1_val, cvx3DTvNomExp_val
 
 
 def indexs(a, val):
@@ -671,6 +701,7 @@ for i, j, k in it:
             mse2000[:] = res['mse2000']
             mse3000[:] = res['mse3000']
 
+
             raise_warning_all_equal(res)
 
             # Keeping the parameter value of each fitting that produce the min-mse (of all the val tested for the subjetc)
@@ -725,6 +756,17 @@ np.save(base_name%(2000), mse2000)
 print 'saved:', base_name%(2000)
 np.save(base_name%(3000), mse3000)
 print 'saved:', base_name%(3000)
+
+base_name = rm.get_dir() + '%s_g'+ str(group_number_job) +'_f'+str(fit_index_job)
+terms = [
+    'cvxFidelityExp',
+    'cvxLaplaceRegExp',
+    'cvxNorm1',
+    'cvx3DTvNomExp'
+]
+for term in terms:
+    np.save(base_name%(term), np.array(res[term]))
+    print 'saved:', base_name%(''), res[term].mean()
 
 
 
