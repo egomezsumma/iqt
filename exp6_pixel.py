@@ -22,7 +22,7 @@ from utils.persistance.ResultManager import ResultManager
 
 t1, t2, t3, t4 = ' '*4,' '*8, ' '*12, ' '*16
 
-print 'PROBANDO: correcion de corrimiento de ventana'
+print 'PROBANDO: guardando los terminos y sacando falas norma1'
 
 IS_NEF = '/home/lgomez/' in sys.prefix
 
@@ -154,9 +154,10 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,c_hr_initial=Non
     # lamda.value =0.5
     
     # Form objective.
-    obj  = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
+    #obj  = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvx.norm(cvxChr) + gamma*cvx3DTvNomExp)
     #obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1)
-         
+    obj  = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1 + gamma*cvx3DTvNomExp)
+     
     # Constraints
     constraints = []
     #constraints = [lamda > 0 , alpha > 0, beta > 0]
@@ -166,7 +167,7 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,c_hr_initial=Non
     # Form and solve problem.
     prob = cvx.Problem(obj, constraints)
     
-    return prob, cvxFidelityExp ,  cvxLaplaceRegExp , cvxNorm1, cvxYhr
+    return prob, cvxFidelityExp ,  cvxLaplaceRegExp , cvxNorm1, cvx3DTvNomExp, cvxYhr
 
 def find_closest_b(b, list_of_bs):
     dif = np.abs(b-list_of_bs[0])
@@ -331,10 +332,17 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     nx, ny, nz = Nx / scale, Ny / scale, Nz / scale
     vhr, vlr = Nx * Ny * Nz, nx * ny * nz
 
+    info = {}
+    info['cvxFidelityExp'] = []
+    info['cvxLaplaceRegExp'] = []
+    info['cvxNorm1'] = []
+    info['cvx3DTvNomExp'] = []
+
     seg = 0
     """ Sequencial"""
     for val in the_range :
-        A, seg, B = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun)
+        A, seg, B, \
+        cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1,cvx3DTvNomExp = try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun)
         print 'Setting reconstructed of', name_parameter, '=', val, 'in:',(i-x0)*m,(i-x0+1)*m, (j-y0)*m,(j-y0+1)*m, (k-z0)*m,(k-z0+1)*m
         reconstructed[val][(i-x0)*m:(i-x0+1)*m, (j-y0)*m:(j-y0+1)*m, (k-z0)*m:(k-z0+1)*m] = A
         reconstructed2[val][(i-x0)*m:(i-x0+1)*m, (j-y0)*m:(j-y0+1)*m, (k-z0)*m:(k-z0+1)*m] = B
@@ -345,14 +353,28 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     original[(i-x0)*m:(i-x0+1)*m, (j-y0)*m:(j-y0+1)*m, (k-z0)*m:(k-z0+1)*m] = i_hr
     original_fake[(i-x0)*m:(i-x0+1)*m, (j-y0)*m:(j-y0+1)*m, (k-z0)*m:(k-z0+1)*m] = i_hr_fake
     #del(i_hr_fake)
+    
+
+    if cvxFidelityExp is not None:
+        info['cvxFidelityExp'] = cvxFidelityExp.value
+
+    if cvxLaplaceRegExp is not None:
+        info['cvxLaplaceRegExp'] = cvxLaplaceRegExp.value
+
+    if cvxNorm1 is not None:
+        info['cvxNorm1'] = cvxNorm1.value
+
+    if cvx3DTvNomExp is not None:
+        info['cvx3DTvNomExp'] = cvx3DTvNomExp.value
+
     print t3, 'fin fit al values for subject:', subject, 'segs:', seg,  datetime.datetime.now()
-    return seg, gtab
+    return seg, gtab, info
 
     
 def try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun):
     print '****before define problem val=', val, '    ',  datetime.datetime.now()
     prob = None
-    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1, cvxYhr = definition_fun(name_parameter+'='+str(val))
+    prob, cvxFidelityExp,  cvxLaplaceRegExp, cvxNorm1, cvx3DTvNomExp, cvxYhr = definition_fun(name_parameter+'='+str(val))
     print 'id(prob)', id(prob)
 
     parameters = dict( (v.name(), v) for v in prob.parameters())
@@ -377,6 +399,9 @@ def try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun):
 
         if cvxNorm1 is not None:
             print t3, '>cvxNorm1', cvxNorm1.value, datetime.datetime.now()
+
+        if cvx3DTvNomExp is not None:
+            print t3, '>cvx3DTvNomExp', cvx3DTvNomExp.value, datetime.datetime.now()
 
         sys.stdout.flush()
 
@@ -413,11 +438,11 @@ def try_value(name_parameter, val, i_hr, M, Nx, Ny, Nz, Nb, Nc, definition_fun):
         else:
             B = np.zeros((Nx, Ny, Nz, Nb), dtype='float32')
 
-    del (C, prob, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1)
+    del (C, prob)
     print t3, '.', datetime.datetime.now()
     print t3, 'A.shape=', A.shape
 
-    return A, seg, B
+    return A, seg, B, cvxFidelityExp, cvxLaplaceRegExp, cvxNorm1,cvx3DTvNomExp
 
 
 def indexs(a, val):
@@ -600,7 +625,7 @@ for i, j, k in it: # aca deberia incrementar de a m los i,j,k(de la hr-img)
     print t1, '= Solving optimization problem (subject: %s, param: %s) === ' % (subject, param_name), datetime.datetime.now()
     sys.stdout.flush()
     # Solve the proble for each value in rango for the current paramter (lamda, alpha ...) 
-    seg, gtab = solveMin_fitCosnt(name_parameter,
+    seg, gtab, info = solveMin_fitCosnt(name_parameter,
                           rango,
                           subject,
                           i, j, k,
@@ -673,6 +698,18 @@ np.save(base_name%(2000), mse2000)
 print 'saved:', base_name%(2000)
 np.save(base_name%(3000), mse3000)
 print 'saved:', base_name%(3000)
+
+base_name = rm.get_dir() + '%s_g'+ str(group_number_job) +'_f'+str(fit_index_job)
+terms = [
+    'cvxFidelityExp',
+    'cvxLaplaceRegExp',
+    'cvxNorm1',
+    'cvx3DTvNomExp'
+]
+for term in terms:
+    np.save(base_name%(term), np.array(info[term]))
+    print 'saved:', base_name%(''), term, np.array(info[term]).mean()
+
 
 
 print 'Lito!', datetime.datetime.now()

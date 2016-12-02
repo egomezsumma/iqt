@@ -134,13 +134,16 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,parameters, c_hr
     
     ## Mapl weight
     beta = cvx.Parameter(value=parameters['beta'], name='beta', sign='positive')#3.197e-10
+    print '   parameters[beta]', parameters['beta']
     ## Sparcity weight
     alpha = cvx.Parameter(value=parameters['alpha'], name='alpha', sign='positive')#4.865e-10
+    print '   parameters[alpha]', parameters['alpha']
     ## Tv-norm weight
     gamma = cvx.Parameter(value=parameters['gamma'], name='gamma',sign='positive')
+    print '   parameters[gamma]', parameters['gamma']
     ## Fidelity weight
     lamda = cvx.Parameter(value=parameters['lamda'], name='lamda',sign='positive')
-
+    print '   parameters[lamda]', parameters['lamda']
 
 
     ### AS VARIABLES
@@ -157,7 +160,8 @@ def define_problem_f1(c_lr, vhr, vlr, G, M, U, tau, gtab, scale,parameters, c_hr
     # Form objective.
     #obj = cvx.Minimize(        lamda * cvxFidelityExp + beta * cvxLaplaceRegExp + alpha * cvx.norm(cvxChr) + gamma * cvx3DTvNomExp)
     #obj  = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1 + gamma*cvx3DTvNomExp)
-    obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1)
+    #obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvxNorm1)
+    obj = cvx.Minimize(lamda*cvxFidelityExp + beta*cvxLaplaceRegExp + alpha*cvx.norm(cvxChr))
          
     # Constraints
     constraints = []
@@ -348,9 +352,14 @@ def solveMin_fitCosnt(name_parameter, the_range, subject,i,j,k, loader_func, G, 
     measures = ['mse', 'mse1000', 'mse2000', 'mse3000']
     #info = dict((key, parray(base_folder + key + '_' + str(subject) + '.txt')) for key in measures)
     info = dict((key, []) for key in measures)
-    seg = 0
+    
 
-   
+    info['cvxFidelityExp'] = []
+    info['cvxLaplaceRegExp'] = []
+    info['cvxNorm1'] = []
+    info['cvx3DTvNomExp'] = []
+
+   seg = 0
     """ Sequencial"""
     for i_val in xrange(len(the_range)) :
         val = the_range[i_val]
@@ -502,6 +511,7 @@ def try_value(name_parameter, val, parameters, i_hr,M, Nx, Ny, Nz, Nb, Nc, b1000
 
     _mse3000 = ((A[:, :, :, b3000_index]-i_hr[:, :, :, b3000_index])**2).mean()
     #info['mse3000'].append(mse3000)
+
 
     
     del (C, prob)
@@ -766,7 +776,7 @@ terms = [
 ]
 for term in terms:
     np.save(base_name%(term), np.array(res[term]))
-    print 'saved:', base_name%(''), res[term].mean()
+    print 'saved:', base_name%(''),term,  np.array(res[term]).mean()
 
 
 

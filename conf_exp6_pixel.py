@@ -51,7 +51,8 @@ subjects_to_exclude = [
     101006,
     108121,
     108323,
-    105115
+    105115,
+    109325
 ]
 
 print 'subjects before exclude:',len(subjects)

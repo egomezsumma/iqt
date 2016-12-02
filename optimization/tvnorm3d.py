@@ -1,6 +1,8 @@
 from cvxpy.expressions.expression import Expression
-from cvxpy.atoms.elementwise.norm2_elemwise import norm2_elemwise
 import cvxpy as cvx
+
+if cvx.__version__ == '0.3.1':
+    from cvxpy.atoms.elementwise.norm2_elemwise import norm2_elemwise
 
 
 
@@ -41,12 +43,22 @@ def tv3d_CubosYSlices(value, *args):
         Z = cvx.vstack(*cub_z)
 
         diffs = []
-        diffs += [
-            X - K,
-            Y - K,
-            Z - K,
-        ]
-        norm2 = norm2_elemwise(*diffs)
+        print 'using cvxpy version:', cvx.__version__
+        if cvx.__version__ == '0.3.1':
+            diffs += [
+                X - K,
+                Y - K,
+                Z - K,
+            ]
+            # Norm2ElementWis (deprecada) en 0.4.8
+            norm2 = norm2_elemwise(*diffs)
+        else:
+            diffs += [
+                (X - K)**2,
+                (Y - K)**2,
+                (Z - K)**2,
+            ]
+            norm2 = cvx.sqrt(sum(diffs))
 
         return cvx.sum_entries(norm2)
 
